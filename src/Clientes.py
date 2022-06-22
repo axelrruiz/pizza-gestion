@@ -2,17 +2,17 @@ class Clientes:
     
     def __init__(self, baseDeDatos, cursor):                                            # Constructor
         self.bD = baseDeDatos                                                           # Recibe BD para usar commit()
-        self.miCursor = cursor                                                          # Recibe un cursor de BD
+        self.miCursor = cursor                                                                # Recibe un cursor de BD
 
     def borrar(self, id):
-        self.miCursor.execute("DELETE FROM clientes WHERE clientes_id = " + str(id))             # Comando SQL
+        self.miCursor.execute("UPDATE clientes SET visible = 0 WHERE clientes_id = " + str(id))             # Comando SQL
         self.bD.connection.commit()                                                     # Confirma cambios en BD
 
     def insertar(self, telefono, nombre, calle, altura, piso, departamento, barrio):
 
         self.miCursor.execute(
-            "INSERT INTO clientes (telefono, nombre, calle, altura, piso, departamento, barrio) VALUES ('"+
-                        telefono+"','"+nombre+"','"+calle+"','"+altura+"','"+piso+"','"+departamento+"','"+barrio+"')")
+            "INSERT INTO clientes (telefono, nombre, calle, altura, piso, departamento, barrio, visible) VALUES ('"+
+                        telefono+"','"+nombre+"','"+calle+"','"+altura+"','"+piso+"','"+departamento+"','"+barrio+",1')")
         self.bD.connection.commit()                                                     # Confirma cambios en BD
     
     def imprimir(self):
