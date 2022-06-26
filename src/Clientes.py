@@ -12,7 +12,7 @@ class Clientes:
 
         self.miCursor.execute(
             "INSERT INTO clientes (telefono, nombre, calle, altura, piso, departamento, barrio, visible) VALUES ('"+
-                        telefono+"','"+nombre+"','"+calle+"','"+altura+"','"+piso+"','"+departamento+"','"+barrio+",1')")
+                        telefono+"','"+nombre+"','"+calle+"','"+altura+"','"+piso+"','"+departamento+"','"+barrio+"','1')")
         self.bD.connection.commit()                                                     # Confirma cambios en BD
     
     def imprimir(self):

@@ -76,7 +76,7 @@ class PizzaYa():
             id= self.listaPedidos.selection()[0]
             self.vaciarTabla(self.listaDetallePedido)
             if int(id)>0:
-                self.pedidoId.set(value=(self.listaPedidos.item(id, "values")[8]))
+                self.pedidoId.set(value=(self.listaPedidos.item(id, "values")[9]))
                 self.completarTablaDetallePedidos(self.cursorBD, self.listaDetallePedido, self.pedidoId.get())
                 self.telefono.config(text="Telefono:  "+self.listaPedidos.item(id, "values")[1])
                 self.nombre.config(text="Nombre:  "+self.listaPedidos.item(id, "values")[2])
@@ -85,19 +85,19 @@ class PizzaYa():
                 self.piso.config(text="Piso: "+self.listaPedidos.item(id, "values")[5])
                 self.departamento.config(text="Depto: "+self.listaPedidos.item(id, "values")[6])
                 self.barrio.config(text=self.listaPedidos.item(id, "values")[7])
-                self.total.config(text=("$",self.listaPedidos.item(id, "values")[10]))
-                self.hora.config(text=(self.listaPedidos.item(id, "values")[13])[11:16])
-                if (self.listaPedidos.item(id, "values")[12]) == "Si":
+                self.total.config(text=("$",self.listaPedidos.item(id, "values")[11]))
+                self.hora.config(text=(self.listaPedidos.item(id, "values")[14])[11:16])
+                if (self.listaPedidos.item(id, "values")[13]) == "Si":
                     self.pago.set(1)
-                elif (self.listaPedidos.item(id, "values")[12]) == "No":
+                elif (self.listaPedidos.item(id, "values")[13]) == "No":
                     self.pago.set(0)
-                if (self.listaPedidos.item(id, "values")[11]) == "Preparacion":
+                if (self.listaPedidos.item(id, "values")[12]) == "Preparacion":
                     self.estado.set(1)
-                elif (self.listaPedidos.item(id, "values")[11]) == "En Camino":
+                elif (self.listaPedidos.item(id, "values")[12]) == "En Camino":
                     self.estado.set(2)
-                elif (self.listaPedidos.item(id, "values")[11]) == "Entregado":
+                elif (self.listaPedidos.item(id, "values")[12]) == "Entregado":
                     self.estado.set(3)
-                elif (self.listaPedidos.item(id, "values")[11]) == "Cancelado":
+                elif (self.listaPedidos.item(id, "values")[12]) == "Cancelado":
                     self.estado.set(4)
 
 
@@ -194,7 +194,7 @@ class PizzaYa():
         #                    Lista Pedidos                                          
 
         self.listaPedidos=ttk.Treeview(self.marcoPedidos, columns= ("clientes_id","telefono","nombre","calle","altura","piso","departamento",
-                                    "barrio","pedidos_id","id_clientes","total","estado","pago","fecha"),
+                                    "barrio","visible","pedidos_id","id_clientes","total","estado","pago","fecha"),
                                     displaycolumns=("calle","altura","piso","departamento","barrio",
                                     "estado","pago","total","nombre","telefono"))
         self.listaPedidos.column("#0",width=0, stretch=NO)
@@ -499,7 +499,8 @@ class PizzaYa():
         self.scrollHotizontal.place(width=600, height=15, x=10, y=280)
         self.listaClientes.config(xscrollcommand=self.scrollHotizontal.set)
 
-        self.completarTabla(cursor,self.listaClientes, "clientes")
+        self.consulta = "SELECT * FROM clientes WHERE visible = 1"
+        self.completarTabla(cursor,self.listaClientes,self.consulta)
 
 
     '''#   ********************                Ventana Nuevo Pedido                              ********************'''
@@ -528,7 +529,7 @@ class PizzaYa():
         self.menuId=IntVar()
         self.productoId=IntVar()
         self.listaProductos=dict()                                             # Listado de Productos seleccionados
-        
+        self.consulta = "SELECT * FROM menu WHERE visible = 1"
 
         self.eticNombre = Label(self.marcoSuperior, text="Nombre: ")
         self.eticNombre.place(x=0,y=0)
@@ -608,7 +609,7 @@ class PizzaYa():
         self.botonSalir.place(x=500,y=100)
 
         self.botonAgregar = Button(self.marcoMenu, text="Agregar", width=10, height=1, command=lambda:[
-            self.agregarProductoMenu(self.listaProductos,self.menuId.get()),self.vaciarTabla(self.listaPedido),
+            self.agregarProductoMenu(self.listaProductos,self.menuId.get(),self.ventanaNuevoPedido),self.vaciarTabla(self.listaPedido),
                 self.completarTablaProductosMenu(cursor,self.listaPedido, "menu", self.listaProductos.items(), self.textoTotal)])
         self.botonAgregar.place(x=190,y=10)
 
@@ -664,7 +665,7 @@ class PizzaYa():
         self.listaPedido.config(yscrollcommand=self.scrollVerticalPed.set)
         
 
-        self.completarTablaMenu(cursor,self.listaMenu)
+        self.completarTabla(cursor,self.listaMenu,self.consulta)
 
 
     '''#   ********************                Ventana Clientes                                  ********************'''
@@ -742,22 +743,23 @@ class PizzaYa():
 
         
         self.clienteId=StringVar()
+        self.consulta = "SELECT * FROM clientes WHERE visible = 1"
         
         self.botonBuscar = Button(self.marcoSuperior, text="Modificar", width=10, height=1, command=lambda:[self.modificarCliente(cursor,
                             self.ventanaClientes, cliente, self.clienteId.get(), self.telefono.get(), self.nombre.get(), self.calle.get(),
                             self.altura.get(), self.piso.get(), self.departamento.get(), self.barrio.get()),
-                            self.vaciarTabla(self.listaClientes), self.completarTabla(cursor, self.listaClientes, "clientes")])
+                            self.vaciarTabla(self.listaClientes), self.completarTabla(cursor, self.listaClientes, self.consulta)])
         self.botonBuscar.place(x=200,y=100)
         
         self.botonBuscar = Button(self.marcoSuperior, text="Eliminar", width=10, height=1, command=lambda:[self.borrarCliente(cliente,
                             self.ventanaClientes, self.clienteId.get()), self.vaciarTabla(self.listaClientes),
-                            self.completarTabla(cursor, self.listaClientes, "clientes")])
+                            self.self.completarTabla(cursor, self.listaClientes, self.consulta)])
         self.botonBuscar.place(x=300,y=100)
         
         self.botonBuscar = Button(self.marcoSuperior, text="Guardar", width=10, height=1, command=lambda:[self.guardarCliente(cursor,
                             self.ventanaClientes, cliente, self.telefono.get(), self.nombre.get(), self.calle.get(),
                             self.altura.get(), self.piso.get(),self.departamento.get(), self.barrio.get()),
-                            self.vaciarTabla(self.listaClientes), self.completarTabla(cursor, self.listaClientes, "clientes")])
+                            self.vaciarTabla(self.listaClientes), self.completarTabla(cursor, self.listaClientes, self.consulta)])
         self.botonBuscar.place(x=400,y=100)
 
         self.botonSalir = Button(self.marcoSuperior, text="Salir", width=10, height=1, command=lambda:self.ventanaClientes.destroy())
@@ -822,7 +824,7 @@ class PizzaYa():
         scrollHotizontal.place(width=600, height=15, x=10, y=280)
         self.listaClientes.config(xscrollcommand=scrollHotizontal.set)
 
-        self.completarTabla(cursor,self.listaClientes, "clientes")
+        self.completarTablaClientes(cursor,self.listaClientes)
 
 
     '''#   ********************                Ventana Menu                                  ********************'''
@@ -863,19 +865,20 @@ class PizzaYa():
 
         
         self.menuId=StringVar()
+        self.consulta= "SELECT * FROM menu WHERE visible = 1"
 
         self.botonBuscar = Button(self.marcoSuperior, text="Modificar", width=10, height=1, command=lambda:[self.modificarMenu(
                             self.ventanaMenu, menu, self.menuId.get(), self.descripcion.get(), self.precioVenta.get()),
-                            self.vaciarTabla(self.listaMenu), self.completarTablaMenu(cursor, self.listaMenu)])
+                            self.vaciarTabla(self.listaMenu), self.completarTabla(cursor, self.listaMenu, self.consulta)])
         self.botonBuscar.place(x=200,y=100)
         
         self.botonBuscar = Button(self.marcoSuperior, text="Eliminar", width=10, height=1, command=lambda:[self.borrarMenu(menu,
-                            self.ventanaMenu, self.menuId.get()), self.vaciarTabla(self.listaMenu), self.completarTablaMenu(cursor, self.listaMenu)])
+                            self.ventanaMenu, self.menuId.get()), self.vaciarTabla(self.listaMenu), self.completarTabla(cursor, self.listaMenu, self.consulta)])
         self.botonBuscar.place(x=300,y=100)
         
         self.botonBuscar = Button(self.marcoSuperior, text="Guardar", width=10, height=1, command=lambda:[self.guardarMenu(cursor,
                             self.ventanaMenu, menu, self.descripcion.get(), self.precioVenta.get()),
-                            self.vaciarTabla(self.listaMenu), self.completarTablaMenu(cursor, self.listaMenu)])
+                            self.vaciarTabla(self.listaMenu), self.completarTabla(cursor, self.listaMenu, self.consulta)])
         self.botonBuscar.place(x=400,y=100)
 
         self.botonSalir = Button(self.marcoSuperior, text="Salir", width=10, height=1, command=lambda:self.ventanaMenu.destroy())
@@ -915,7 +918,7 @@ class PizzaYa():
         scrollHotizontal.place(width=600, height=15, x=10, y=280)     
         self.listaMenu.config(xscrollcommand=scrollHotizontal.set)
 
-        self.completarTablaMenu(cursor,self.listaMenu)
+        self.completarTabla(cursor,self.listaMenu,self.consulta)
 
             
 
@@ -935,7 +938,7 @@ class PizzaYa():
                 self.consulta = cursor.fetchall()
                 
                 for i in self.consulta:
-                    id = i[8]
+                    id = i[9]
                     tabla.insert("", END, id, values= i)
 
     def completarTablaDetallePedidos(self, cursor, tabla, pedidoID):
@@ -946,28 +949,17 @@ class PizzaYa():
         for i in self.consulta:
             id = i[0]
             tabla.insert("", END, id, values= i)
+         
+    def completarTabla(self, cursor, tabla, consultaSql):
+        cursor.execute(consultaSql)                                 # Consulta SQL
+        self.consulta = cursor.fetchall() 
+                
+        for i in self.consulta:
+            id = i[0]
+            tabla.insert("", END, id, values= i)
 
     def completarTablareportes(self, reporte, tabla, desdeAnio, desdeMes, desdeDia, hastaAnio, hastaMes, hastaDia):
-                
         self.consulta = reporte.parcial(desdeAnio, desdeMes, desdeDia, hastaAnio, hastaMes, hastaDia)
-        for i in self.consulta:
-            id = i[0]
-            tabla.insert("", END, id, values= i)
-    
-    def completarTablaMenu(self, cursor, tabla):
-        
-        cursor.execute("SELECT * FROM menu WHERE visible = 1")                                 # Consulta SQL
-        self.consulta = cursor.fetchall() 
-                
-        for i in self.consulta:
-            id = i[0]
-            tabla.insert("", END, id, values= i)
-      
-    def completarTabla(self, cursor, tabla, nombreTabla):
-        
-        cursor.execute("SELECT * FROM "+ nombreTabla)                                 # Consulta SQL
-        self.consulta = cursor.fetchall() 
-                
         for i in self.consulta:
             id = i[0]
             tabla.insert("", END, id, values= i)
@@ -975,7 +967,7 @@ class PizzaYa():
     def completarTablaProductosMenu(self, cursor, tabla, nombreTabla, listaPedido, textoTotal):
         self.total=0
         for i in listaPedido:
-            cursor.execute("SELECT * FROM "+nombreTabla+" WHERE menu_id= "+str(i[0]))                                 # Consulta SQL
+            cursor.execute("SELECT * FROM "+nombreTabla+" WHERE menu_id= "+str(i[0]))   # Consulta SQL
             self.consulta = cursor.fetchall()
             
             for j in self.consulta:
@@ -984,15 +976,18 @@ class PizzaYa():
                 self.total +=(j[2]*i[1])
         textoTotal.config(text=("$ "+str(self.total)))
 
-    def agregarProductoMenu(self, listaProducto, producto):
+    def agregarProductoMenu(self, listaProducto, producto, ventana):
         self.cantidad=0
 
-        if listaProducto.get(producto) == None:
-            listaProducto.setdefault(producto,1)
+        if producto == 0:
+            messagebox.showerror("Nuevo Pedido", "No selecciono ningun producto", parent=ventana)           # Si no se sellecciona producto no se genera
         else:
-            self.cantidad += listaProducto.get(producto)+1
-            listaProducto.pop(producto)
-            listaProducto.setdefault(producto,self.cantidad)
+            if listaProducto.get(producto) == None:
+                listaProducto.setdefault(producto,1)
+            else:
+                self.cantidad += listaProducto.get(producto)+1
+                listaProducto.pop(producto)
+                listaProducto.setdefault(producto,self.cantidad)
 
     def eliminarProductoMenu(self, listaProducto, producto):
         self.cantidad=0
@@ -1007,10 +1002,14 @@ class PizzaYa():
     def agregarPedido(self, cursor, ventana, cliente, pedidos, telefono, nombre, calle, altura, piso, departamento, barrio, listaProductos):
         if nombre == "" or telefono == "" or calle == "" or altura == "":
             messagebox.showerror("Nuevo Pedido", "No se genero el pedido, informacion del cliente incompleta", parent=ventana)
-            
+
+        elif not listaProductos:
+            messagebox.showerror("Nuevo Pedido", "No se genero el pedido, no agrego ningun producto", parent=ventana)
+
         else:
+            print(listaProductos)
             cursor.execute("SELECT * FROM clientes WHERE telefono= '"+telefono+"' AND nombre= '"+nombre+"' AND calle= '"+
-            calle+"' AND altura= '"+altura+"'")
+           calle+"' AND altura= '"+altura+"'")
             self.consulta = cursor.fetchall()
         
             if self.consulta == []:
@@ -1025,9 +1024,9 @@ class PizzaYa():
                 messagebox.showinfo("Nuevo Pedido", "Se genero un nuevo pedido", parent=ventana)
 
     def busquedaCliente(self, cursor, ventana, tabla, telefono):
-        cursor.execute("SELECT * FROM clientes WHERE telefono= "+telefono)
+        cursor.execute("SELECT * FROM clientes WHERE telefono= '"+telefono+"' AND visible=1")
         self.consulta = cursor.fetchall()
-        
+
         if self.consulta == []:                                                          # Si no existe
             messagebox.showinfo("Buscar Cliente", "No Hay Ningun Cliente Asociado con el Numero Telefonico", parent=ventana)
         else:
@@ -1114,7 +1113,7 @@ class PizzaYa():
         self.completarTablaPedidos(self.cursorBD, self.listaPedidos)
     
     def salir(self):                                                        #boton de salir con mensaje de confirmacion
-        self.espuesta = messagebox.askquestion("Salir", "Desea Salir", parent=self.ventana)
+        self.respuesta = messagebox.askquestion("Salir", "Desea Salir", parent=self.ventana)
 
         if self.respuesta == "yes":
             self.ventana.destroy()
