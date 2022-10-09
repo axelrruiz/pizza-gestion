@@ -4,7 +4,7 @@ class Pedidos:
         self.bD = baseDeDatos                                                           # Recibe BD para usar commit()
         self.miCursor = cursor                                                          # Recibe un cursor de BD
 
-    def insertar(self, idCliente, pago, productoCantidad):                              # ProductoCantidad es una tupla dentro de una lista
+    def insertar(self, idCliente, pago, productoCantidad, usuario):                              # ProductoCantidad es una tupla dentro de una lista
         total = 0
         idPedido = 0
 
@@ -15,9 +15,10 @@ class Pedidos:
             total += float(consulta[0][0]) * i[1]                                       # Suma el precio multiplicado por la cantidad al tot
         
         # **************                  Guarda en Tabla pedidos                               **************
-        val = (idCliente, total, pago)
+        val = (idCliente, total, pago, usuario, usuario)
 
-        self.miCursor.execute("INSERT INTO pedidos (id_cliente, total, estado, pago) VALUES (%s,%s,'Preparacion',%s)", val)
+        self.miCursor.execute("INSERT INTO pedidos (id_cliente, total, estado, pago, id_usuario_crea, id_usuario_modifica)"+
+        " VALUES (%s,%s,'Preparacion',%s,%s,%s)", val)
         self.bD.connection.commit()                                                     # Confirma cambios en BD
        
         # **************                  Guarda en Tabla detalle_pedidos                       **************
@@ -37,14 +38,16 @@ class Pedidos:
         
         for i in pedidos:
             print("ID: {}\tCliente: {}\tTotal: {}\tEstado: {}\tPago: {}\tFecha: {}".format
-            (i[0], i[1], i[2], i[3], i[4], i[5]))
+            (i[0], i[1], i[4], i[5], i[6], i[7]))
     
-    def setEstado(self, IdPedido, estado):
-        self.miCursor.execute("UPDATE pedidos SET Estado = '"+estado+"' WHERE pedidos_id = "+IdPedido)
+    def setEstado(self, IdPedido, estado, usuario):
+        val = (estado, usuario, IdPedido)
+        self.miCursor.execute("UPDATE pedidos SET Estado = %s, id_usuario_modifica =%s WHERE pedidos_id = %s", val)
         self.bD.connection.commit()                                                     # Confirma cambios en BD
     
-    def setPago(self, IdPedido, pago):
-        self.miCursor.execute("UPDATE pedidos SET pago = '"+pago+"' WHERE pedidos_id = "+IdPedido)
+    def setPago(self, IdPedido, pago, usuario):
+        val = (pago, usuario, IdPedido)
+        self.miCursor.execute("UPDATE pedidos SET pago = %s, id_usuario_modifica =%s WHERE pedidos_id = %s", val)
         self.bD.connection.commit()                                                     # Confirma cambios en BD
     
 

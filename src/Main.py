@@ -1,30 +1,34 @@
+import os
 from Conexion import *
 from tkinter import *
 from tkinter import ttk
 from tkinter import messagebox
+from tkinter.ttk import Combobox
 from tkcalendar import *                                                     #hay que instalarlo  pip install tkcalendar
 from datetime import date
 from datetime import datetime
 from Pedidos import *
 from Reportes import *
 from Clientes import *
+from Usuarios import *
 from MenuProductos import *
-#from Login import *
+from CategoriasMenuProductos import *
+from Login import *
 
 
 class PizzaYa():
-    def __init__(self):
+    def __init__(self, cuentaUsuario, cur, ico, rep, cli, cat, me, ped, usu):
 
-        self.bd = BaseDeDatos("localhost", "root", "", "pizzaya")
-        self.cursorBD = self.bd.getCursor()
-        self.icono = r"..\img\logo.ico"
-        self.reporte = Reportes(self.bd, self.cursorBD)
-        self.cliente = Clientes(self.bd, self.cursorBD)
-        self.men = MenuProductos(self.bd, self.cursorBD)
-        self.pedidos= Pedidos(self.bd, self.cursorBD)
+        self.cursorBD = cur
+        self.icono = ico
+        self.reporte = rep
+        self.cliente = cli
+        self.categoriaMen = cat
+        self.men = me
+        self.pedidos= ped
+        self.usuario = usu
 
-
-
+       
         #   ***********************************************************************************************************
         #   ********************                Ventanas                                           ********************
         #   ***********************************************************************************************************
@@ -44,25 +48,30 @@ class PizzaYa():
         self.barraMenu=Menu(self.ventana)                                                         # crea la barra de menu
         self.ventana.config(menu=self.barraMenu)                                                  # vincula la barra de menu con la ventana
 
-
+        
         #   ********************                Barra de Menu                                        ********************
 
         self.opcionesMenu = Menu(self.barraMenu, tearoff=0)                            
         self.barraMenu.add_cascade(label="Opciones", menu=self.opcionesMenu)
-
+        self.opcionesMenu.add_command(label="Actualizar Precios por Categorias", command=lambda:self.preciosPorCategoria(self.cursorBD, self.ventana, self.men, cuentaUsuario))
+        self.opcionesMenu.add_command(label="Actualizar Precios por Productos", command=lambda:self.preciosPorProducto(self.cursorBD, self.ventana, self.men, cuentaUsuario))
+        self.opcionesMenu.add_command(label="Administrar Usuarios", command=lambda:self.usuarios(self.cursorBD, self.ventana, self.usuario))
         self.opcionesMenu.add_separator()                                         #linea separador
+        self.opcionesMenu.add_command(label="Cerrar Sesión", command=lambda:self.salir())
         self.opcionesMenu.add_command(label="Salir", command=lambda:self.salir())
 
         self.ventanaEmergenteCLientes = Menu(self.barraMenu, tearoff=0)
-        self.barraMenu.add_cascade(label="Clientes", command=lambda:self.clientes(self.cursorBD, self.ventana, self.cliente))
+        self.barraMenu.add_cascade(label="Clientes", command=lambda:self.clientes(self.cursorBD, self.ventana, self.cliente, cuentaUsuario))
 
         self.ventanaEmergenteMenu = Menu(self.barraMenu, tearoff=0)
-        self.barraMenu.add_cascade(label="Menu", command=lambda:self.menu(self.cursorBD, self.ventana, self.men))
+        self.barraMenu.add_cascade(label="Menu", menu=self.ventanaEmergenteMenu)
+        self.ventanaEmergenteMenu.add_command(label="Administrar Categorias", command=lambda:self.categoriasMenu(self.cursorBD, self.ventana, self.categoriaMen, cuentaUsuario))
+        self.ventanaEmergenteMenu.add_command(label="Administrar Menu", command=lambda:self.menu(self.cursorBD, self.ventana, self.men, cuentaUsuario))
 
-        ventanaEmergenteReporte = Menu(self.barraMenu, tearoff=0)
-        self.barraMenu.add_cascade(label="Reporte", menu= ventanaEmergenteReporte)
-        ventanaEmergenteReporte.add_command(label="Reporte Mensual", command=lambda:self.reporteMensual(self.reporte, self.ventana))
-        ventanaEmergenteReporte.add_command(label="Reporte Parcial", command=lambda:self.reporteParcial(self.reporte, self.ventana))
+        self.ventanaEmergenteReporte = Menu(self.barraMenu, tearoff=0)
+        self.barraMenu.add_cascade(label="Reporte", menu=self.ventanaEmergenteReporte)
+        self.ventanaEmergenteReporte.add_command(label="Reporte Mensual", command=lambda:self.reporteMensual(self.reporte, self.ventana))
+        self.ventanaEmergenteReporte.add_command(label="Reporte Parcial", command=lambda:self.reporteParcial(self.reporte, self.ventana))
 
 
         #   ********************                Ventana Principal Pedidos                          ********************
@@ -76,30 +85,29 @@ class PizzaYa():
             id= self.listaPedidos.selection()[0]
             self.vaciarTabla(self.listaDetallePedido)
             if int(id)>0:
-                self.pedidoId.set(value=(self.listaPedidos.item(id, "values")[9]))
+                self.pedidoId.set(value=(self.listaPedidos.item(id, "values")[0]))
                 self.completarTablaDetallePedidos(self.cursorBD, self.listaDetallePedido, self.pedidoId.get())
-                self.telefono.config(text="Telefono:  "+self.listaPedidos.item(id, "values")[1])
-                self.nombre.config(text="Nombre:  "+self.listaPedidos.item(id, "values")[2])
-                self.calle.config(text="Direccion:  "+self.listaPedidos.item(id, "values")[3])
-                self.altura.config(text=self.listaPedidos.item(id, "values")[4])
-                self.piso.config(text="Piso: "+self.listaPedidos.item(id, "values")[5])
-                self.departamento.config(text="Depto: "+self.listaPedidos.item(id, "values")[6])
-                self.barrio.config(text=self.listaPedidos.item(id, "values")[7])
-                self.total.config(text=("$",self.listaPedidos.item(id, "values")[11]))
-                self.hora.config(text=(self.listaPedidos.item(id, "values")[14])[11:16])
-                if (self.listaPedidos.item(id, "values")[13]) == "Si":
+                self.telefono.config(text="Telefono:  "+self.listaPedidos.item(id, "values")[10])
+                self.nombre.config(text="Nombre:  "+self.listaPedidos.item(id, "values")[9])
+                self.calle.config(text="Direccion:  "+self.listaPedidos.item(id, "values")[1])
+                self.altura.config(text=self.listaPedidos.item(id, "values")[2])
+                self.piso.config(text="Piso: "+self.listaPedidos.item(id, "values")[3])
+                self.departamento.config(text="Depto: "+self.listaPedidos.item(id, "values")[4])
+                self.barrio.config(text=self.listaPedidos.item(id, "values")[5])
+                self.total.config(text= ("$")+ str(self.listaPedidos.item(id, "values")[8]))
+                self.hora.config(text=(self.listaPedidos.item(id, "values")[11])[11:16])
+                if (self.listaPedidos.item(id, "values")[7]) == "Si":
                     self.pago.set(1)
-                elif (self.listaPedidos.item(id, "values")[13]) == "No":
+                elif (self.listaPedidos.item(id, "values")[7]) == "No":
                     self.pago.set(0)
-                if (self.listaPedidos.item(id, "values")[12]) == "Preparacion":
+                if (self.listaPedidos.item(id, "values")[6]) == "Preparacion":
                     self.estado.set(1)
-                elif (self.listaPedidos.item(id, "values")[12]) == "En Camino":
+                elif (self.listaPedidos.item(id, "values")[6]) == "En Camino":
                     self.estado.set(2)
-                elif (self.listaPedidos.item(id, "values")[12]) == "Entregado":
+                elif (self.listaPedidos.item(id, "values")[6]) == "Entregado":
                     self.estado.set(3)
-                elif (self.listaPedidos.item(id, "values")[12]) == "Cancelado":
+                elif (self.listaPedidos.item(id, "values")[6]) == "Cancelado":
                     self.estado.set(4)
-
 
         self.marcoSuperior=LabelFrame(self.ventana)
         self.marcoSuperior.place(x=10, y=10, width=self.anchoVentana-30, height=240)
@@ -143,36 +151,34 @@ class PizzaYa():
 
 
         self.preparacion=Radiobutton(self.marcoSuperior, text="Preparacion", variable=self.estado, value=1,
-                                    command=lambda:self.cambiarEstadoPedido(self.pedidos, self.ventana, self.estado.get(), self.pedidoId.get()))
+                                    command=lambda:self.cambiarEstadoPedido(self.pedidos, self.ventana, self.estado.get(), self.pedidoId.get(), cuentaUsuario))
         self.preparacion.place(x=620, y=50)
 
         self.enCamino=Radiobutton(self.marcoSuperior, text="En Camino", variable=self.estado, value=2,
-                                    command=lambda:self.cambiarEstadoPedido(self.pedidos, self.ventana, self.estado.get(), self.pedidoId.get()))
+                                    command=lambda:self.cambiarEstadoPedido(self.pedidos, self.ventana, self.estado.get(), self.pedidoId.get(), cuentaUsuario))
         self.enCamino.place(x=620, y=75)
 
         self.entregado=Radiobutton(self.marcoSuperior, text="Entregado", variable=self.estado, value=3,
-                                    command=lambda:self.cambiarEstadoPedido(self.pedidos, self.ventana, self.estado.get(), self.pedidoId.get()))
+                                    command=lambda:self.cambiarEstadoPedido(self.pedidos, self.ventana, self.estado.get(), self.pedidoId.get(), cuentaUsuario))
         self.entregado.place(x=620, y=100)
-
+        
         self.cancelado=Radiobutton(self.marcoSuperior, text="Cancelado", variable=self.estado, value=4,
-                                    command=lambda:self.cambiarEstadoPedido(self.pedidos, self.ventana, self.estado.get(), self.pedidoId.get()))
+                                    command=lambda:self.cambiarEstadoPedido(self.pedidos, self.ventana, self.estado.get(), self.pedidoId.get(), cuentaUsuario))
         self.cancelado.place(x=620, y=125)
 
         self.estaPago=Checkbutton(self.marcoSuperior, text="Esta Pago", variable=self.pago, onvalue=1, offvalue=0,
-                                    command=lambda:self.cambiarEstadoPago(self.pedidos, self.pago.get(), self.pedidoId.get()))
+                                    command=lambda:self.cambiarEstadoPago(self.pedidos, self.pago.get(), self.pedidoId.get(), cuentaUsuario))
         self.estaPago.place(x=620, y=165)
 
 
         self.botonNuevoPedido = Button(self.marcoSuperior, text="Nuevo Pedido", width=15, height=1, command=lambda:[self.nuevoPedido(self.cursorBD,
-                                    self.ventana, self.cliente, self.pedidos)])
+                                    self.ventana, self.cliente, self.pedidos, cuentaUsuario)])
         self.botonNuevoPedido.place(x=620, y=200)
 
 
         #                    Lista Detalle de Pedidos                                   
 
-        self.listaDetallePedido=ttk.Treeview(self.marcoSuperior, columns= ("detalle_pedidos_id","id_pedido","id_menu","cantidad","menu_id", "descripcion",
-                                    "precio_venta", "visible"),
-                                    displaycolumns=("cantidad","descripcion","precio_venta"))
+        self.listaDetallePedido=ttk.Treeview(self.marcoSuperior, columns= ("cantidad","descripcion","precio_venta"))
         self.listaDetallePedido.column("#0",width=0, stretch=NO)
         self.listaDetallePedido.column("cantidad",width=10, anchor=CENTER)
         self.listaDetallePedido.column("descripcion",width=250) 
@@ -193,10 +199,10 @@ class PizzaYa():
 
         #                    Lista Pedidos                                          
 
-        self.listaPedidos=ttk.Treeview(self.marcoPedidos, columns= ("clientes_id","telefono","nombre","calle","altura","piso","departamento",
-                                    "barrio","visible","pedidos_id","id_clientes","total","estado","pago","fecha"),
+        self.listaPedidos=ttk.Treeview(self.marcoPedidos, columns= ("pedidos_id","calle","altura","piso","departamento","barrio",
+                                    "estado","pago","total","nombre","telefono","fecha","crea","modifica"),
                                     displaycolumns=("calle","altura","piso","departamento","barrio",
-                                    "estado","pago","total","nombre","telefono"))
+                                    "estado","pago","total","nombre","telefono","crea","modifica"))
         self.listaPedidos.column("#0",width=0, stretch=NO)
         self.listaPedidos.column("telefono",width=100, anchor=CENTER)
         self.listaPedidos.column("nombre",width=150, anchor=CENTER)
@@ -209,6 +215,8 @@ class PizzaYa():
         self.listaPedidos.column("estado",width=100, anchor=CENTER)
         self.listaPedidos.column("pago",width=50, anchor=CENTER) 
         self.listaPedidos.column("fecha",width=100, anchor=CENTER)
+        self.listaPedidos.column("crea",width=100, anchor=CENTER)
+        self.listaPedidos.column("modifica",width=100, anchor=CENTER)
         self.listaPedidos.pack()
         self.listaPedidos.place(width=(self.anchoVentana -50), height=(self.altoVentana -310), x=10)
         self.listaPedidos.bind("<<TreeviewSelect>>", click)
@@ -226,9 +234,11 @@ class PizzaYa():
         self.listaPedidos.heading("estado",text="Estado")
         self.listaPedidos.heading("pago",text="Pago")
         self.listaPedidos.heading("fecha",text="Hora")
+        self.listaPedidos.heading("crea",text="Creado Por")
+        self.listaPedidos.heading("modifica",text="Modificado Por")
 
         self.scrollTexto=Scrollbar(self.marcoPedidos, command=self.listaPedidos.yview)        #scroll para el cuadro de texto yview posiciona el escrol verticalmente
-        self.scrollTexto.place(width=15, height=self.altoVentana -200, x=self.anchoVentana -35)  #el scroll toma la dimencion del cuadro de texto
+        self.scrollTexto.place(width=15, height=self.altoVentana -305, x=self.anchoVentana -35)  #el scroll toma la dimencion del cuadro de texto
         self.listaPedidos.config(yscrollcommand=self.scrollTexto.set)
 
         self.scrollHotizontal=Scrollbar(self.marcoPedidos, command=self.listaPedidos.xview, orient=HORIZONTAL)
@@ -238,8 +248,6 @@ class PizzaYa():
         self.completarTablaPedidos(self.cursorBD, self.listaPedidos)
 
         self.ventana.mainloop()                      #loop de la ventana esperando accion del usuario
-
-
 
 
     '''#   ********************                Ventanas Reportes                                  ********************'''
@@ -259,44 +267,80 @@ class PizzaYa():
         self.ventanaReporteMensual.iconbitmap(self.icono)                                         #self.icono de la ventana
 
 
-        self.marcoSuperior=Frame(self.ventanaReporteMensual)
-        self.marcoSuperior.place(y=10, width=640, height=50)
-        self.marcoReporte=Frame(self.ventanaReporteMensual)
-        self.marcoReporte.place(y=70, width=640, height=400)
+        self.marcoSuperiorMensual=Frame(self.ventanaReporteMensual)
+        self.marcoSuperiorMensual.place(y=10, width=640, height=100)
+        self.marcoReporteMensual=Frame(self.ventanaReporteMensual)
+        self.marcoReporteMensual.place(y=120, width=640, height=350)
             
+        self.textoEntregadosreporteMensual = Label(self.marcoSuperiorMensual, text="Pedidos Entregados: ")
+        self.textoEntregadosreporteMensual.place(x=10, y=10)
+        
+        self.numeroEntregadosreporteMensual = Label(self.marcoSuperiorMensual)
+        self.numeroEntregadosreporteMensual.place(x=120, y=10)
 
-        self.botonSalir = Button(self.marcoSuperior, text="Salir", width=10, height=1,
+        self.textoCanceladoreporteMensual = Label(self.marcoSuperiorMensual, text="Pedidos Cancelados: ")
+        self.textoCanceladoreporteMensual.place(x=250, y=10)
+        
+        self.numeroCanceladoreporteMensual = Label(self.marcoSuperiorMensual)
+        self.numeroCanceladoreporteMensual.place(x=360, y=10)
+
+        self.textoTotalreporteMensual = Label(self.marcoSuperiorMensual, text="Total Vendido: ")
+        self.textoTotalreporteMensual.place(x=10, y=65)
+        
+        self.totalreporteMensual = Label(self.marcoSuperiorMensual, text="$ 0")
+        self.totalreporteMensual.place(x=100, y=65)
+
+
+        self.botonSalirreporteMensual = Button(self.marcoSuperiorMensual, text="Salir", width=10, height=1,
                                 command=lambda:self.ventanaReporteMensual.destroy())
-        self.botonSalir.place(x=500, y=15)
+        self.botonSalirreporteMensual.place(x=500, y=65)
 
-        self.listaPedidos=ttk.Treeview(self.marcoReporte, columns= ("pedidos_id","id_clientes","total","estado","pago","fecha"),
-                                    displaycolumns= ("id_clientes","total","estado","pago","fecha"))
-        self.listaPedidos.column("#0",width=0, stretch=NO)
-        self.listaPedidos.column("id_clientes",width=50, anchor=CENTER)
-        self.listaPedidos.column("total",width=150, anchor=CENTER) 
-        self.listaPedidos.column("estado",width=100, anchor=CENTER)
-        self.listaPedidos.column("pago",width=50, anchor=CENTER) 
-        self.listaPedidos.column("fecha",width=150, anchor=CENTER)
-        self.listaPedidos.pack()
-        self.listaPedidos.place(width=600, height=400, x=10)
+        self.listaReporteMensual=ttk.Treeview(self.marcoReporteMensual, columns= ("pedidos_id","crea","modifica","total","estado","fecha"),
+                                    displaycolumns= ("pedidos_id","total","estado","fecha","crea","modifica"))
+        self.listaReporteMensual.column("#0",width=0, stretch=NO)
+        self.listaReporteMensual.column("pedidos_id",width=100, anchor=CENTER)
+        self.listaReporteMensual.column("total",width=150, anchor=CENTER) 
+        self.listaReporteMensual.column("estado",width=150, anchor=CENTER) 
+        self.listaReporteMensual.column("fecha",width=150, anchor=CENTER)
+        self.listaReporteMensual.column("crea",width=100, anchor=CENTER) 
+        self.listaReporteMensual.column("modifica",width=100, anchor=CENTER)
+        self.listaReporteMensual.pack()
+        self.listaReporteMensual.place(width=600, height=330, x=10)
         
-        self.listaPedidos.heading("#0",text="")
-        self.listaPedidos.heading("id_clientes",text="Cliente")
-        self.listaPedidos.heading("total",text="Total")
-        self.listaPedidos.heading("estado",text="Estado")
-        self.listaPedidos.heading("pago",text="Pago")
-        self.listaPedidos.heading("fecha",text="Fecha")
+        self.listaReporteMensual.heading("#0",text="")
+        self.listaReporteMensual.heading("pedidos_id",text="Pedido N°")
+        self.listaReporteMensual.heading("total",text="Total")
+        self.listaReporteMensual.heading("estado",text="Estado")
+        self.listaReporteMensual.heading("fecha",text="Fecha")
+        self.listaReporteMensual.heading("crea",text="Creado Por")
+        self.listaReporteMensual.heading("modifica",text="Modificado Por")
 
-        consulta = reporte.mensual(date.today().year, date.today().month)
-        for i in consulta:
-            id = i[0]
-            self.listaPedidos.insert("", END, id, values= i)
+        self.totreporteMensual=IntVar()
+        self.totEntregadoreporteMensual=IntVar()
+        self.totCanceladoreporteMensual=IntVar()
+
+        self.consultareporteMensual = reporte.mensual(date.today().year, date.today().month)
+        for i in self.consultareporteMensual:
+            idlistaReporteMensual = i[0]
+            self.listaReporteMensual.insert("", END, idlistaReporteMensual, values= i)
+            if i[4] == "Entregado":
+                self.totreporteMensual.set(self.totreporteMensual.get()+i[3])
+                self.totEntregadoreporteMensual.set(self.totEntregadoreporteMensual.get()+1)
+            elif i[4] == "Cancelado":
+                self.totCanceladoreporteMensual.set(self.totCanceladoreporteMensual.get()+1)
+                
+        self.totalreporteMensual.config(text=("$ "+ str(self.totreporteMensual.get())))
+        self.numeroEntregadosreporteMensual.config(text=(self.totEntregadoreporteMensual.get()))
+        self.numeroCanceladoreporteMensual.config(text=(self.totCanceladoreporteMensual.get()))
+         
+        self.scrollTextoreporteMensual=Scrollbar(self.marcoReporteMensual, command=self.listaReporteMensual.yview)   #scroll para el cuadro de texto yview posiciona el escrol verticalmente
+        self.scrollTextoreporteMensual.place(width=15, height=330, x=615)                    #el scroll toma la dimencion del cuadro de texto
+        self.listaReporteMensual.config(yscrollcommand=self.scrollTexto.set)
         
-        self.scrollTexto=Scrollbar(self.marcoReporte, command=self.listaPedidos.yview)   #scroll para el cuadro de texto yview posiciona el escrol verticalmente
-        self.scrollTexto.place(width=15, height=400, x=615)                    #el scroll toma la dimencion del cuadro de texto
-        self.listaPedidos.config(yscrollcommand=self.scrollTexto.set)
-            
-
+        self.scrollHotizontalreporteMensual=Scrollbar(self.marcoReporteMensual, command=self.listaReporteMensual.xview, orient=HORIZONTAL)
+        self.scrollHotizontalreporteMensual.place(width=self.anchoVentana -45, height=15, x=10, y=self.altoVentana- 145)
+        self.listaReporteMensual.config(xscrollcommand=self.scrollHotizontal.set)
+    
     def reporteParcial(self, reporte, vent):
         self.anchoVentana = 640
         self.altoVentana = 480
@@ -311,55 +355,80 @@ class PizzaYa():
         self.ventanaReporteParcial.iconbitmap(self.icono)                                           #self.icono de la ventana
 
 
-        self.marcoSuperior=Frame(self.ventanaReporteParcial)
-        self.marcoSuperior.place(y=10, width=640, height=50)
-        self.marcoReporte=Frame(self.ventanaReporteParcial)
-        self.marcoReporte.place(y=70, width=640, height=400)
+        self.marcoSuperiorParcial=Frame(self.ventanaReporteParcial)
+        self.marcoSuperiorParcial.place(y=10, width=640, height=150)
+        self.marcoReporteParcial=Frame(self.ventanaReporteParcial)
+        self.marcoReporteParcial.place(y=170, width=640, height=300)
             
 
-        self.textoDesde = Label(self.marcoSuperior, text="Desde: ")
-        self.textoDesde.grid(row=0, column=0, padx=(10,0))
+        self.textoDesdeReporteParcial = Label(self.marcoSuperiorParcial, text="Desde: ")
+        self.textoDesdeReporteParcial.grid(row=0, column=0, padx=(10,0))
 
-        self.textoHasta = Label(self.marcoSuperior, text="Hasta: ")
-        self.textoHasta.grid(row=0, column=2, padx=(10,0))
+        self.textoHastaReporteParcial = Label(self.marcoSuperiorParcial, text="Hasta: ")
+        self.textoHastaReporteParcial.grid(row=0, column=2, padx=(10,0))
 
-        self.fechaDesde = DateEntry(self.marcoSuperior, date_pattern='dd/mm/yyyy')
-        self.fechaDesde.grid(row=0, column=1)
+        self.fechaDesdeReporteParcial = DateEntry(self.marcoSuperiorParcial, date_pattern='dd/mm/yyyy')
+        self.fechaDesdeReporteParcial.grid(row=0, column=1)
 
-        self.fechaHasta = DateEntry(self.marcoSuperior, date_pattern='dd/mm/yyyy')
-        self.fechaHasta.grid(row=0, column=3)
+        self.fechaHastaReporteParcial = DateEntry(self.marcoSuperiorParcial, date_pattern='dd/mm/yyyy')
+        self.fechaHastaReporteParcial.grid(row=0, column=3)
+
+        self.textoEntregadosReporteParcial = Label(self.marcoSuperiorParcial, text="Pedidos Entregados: ")
+        self.textoEntregadosReporteParcial.place(x=10, y=60)
         
-        self.botonBuscar = Button(self.marcoSuperior, text="Buscar", width=10, height=1, command=lambda:[self.vaciarTabla(self.listaPedidos),
-                self.completarTablareportes(reporte, self.listaPedidos,self.fechaDesde.get()[6:10], self.fechaDesde.get()[3:5], self.fechaDesde.get()[0:2],
-                                            self.fechaHasta.get()[6:10], self.fechaHasta.get()[3:5], self.fechaHasta.get()[0:2])])
-        self.botonBuscar.grid(row=0, column=4, padx=(130,0), pady=10)
+        self.numeroEntregadosReporteParcial = Label(self.marcoSuperiorParcial)
+        self.numeroEntregadosReporteParcial.place(x=120, y=60)
 
-        self.botonSalir = Button(self.marcoSuperior, text="Salir", width=10, height=1,
+        self.textoCanceladoReporteParcial = Label(self.marcoSuperiorParcial, text="Pedidos Cancelados: ")
+        self.textoCanceladoReporteParcial.place(x=250, y=60)
+        
+        self.numeroCanceladoReporteParcial = Label(self.marcoSuperiorParcial)
+        self.numeroCanceladoReporteParcial.place(x=360, y=60)
+
+        self.textoTotalReporteParcial = Label(self.marcoSuperiorParcial, text="Total Vendido: ")
+        self.textoTotalReporteParcial.place(x=10, y=115)
+        
+        self.totalReporteParcial = Label(self.marcoSuperiorParcial, text="$ 0")
+        self.totalReporteParcial.place(x=100, y=115)
+    
+        
+        self.botonBuscarReporteParcial = Button(self.marcoSuperiorParcial, text="Buscar", width=10, height=1, command=lambda:[self.vaciarTabla(self.listaReporteParcial),
+                                    self.completarTablareportes(reporte, self.listaReporteParcial,self.fechaDesdeReporteParcial.get()[6:10], self.fechaDesdeReporteParcial.get()[3:5],
+                                    self.fechaDesdeReporteParcial.get()[0:2], self.fechaHastaReporteParcial.get()[6:10], self.fechaHastaReporteParcial.get()[3:5], self.fechaHastaReporteParcial.get()[0:2],
+                                    self.totalReporteParcial, self.numeroEntregadosReporteParcial, self.numeroCanceladoReporteParcial)])
+        self.botonBuscarReporteParcial.place(x=400, y=115)
+
+        self.botonSalirReporteParcial = Button(self.marcoSuperiorParcial, text="Salir", width=10, height=1,
                                 command=lambda:[self.ventanaReporteParcial.destroy()])
-        self.botonSalir.grid(row=0, column=5, padx=(10), pady=10)
+        self.botonSalirReporteParcial.place(x=500, y=115)
 
-        self.listaPedidos=ttk.Treeview(self.marcoReporte, columns= ("pedidos_id","id_clientes","total","estado","pago","fecha"),
-                                    displaycolumns=("id_clientes","total","estado","pago","fecha"))
-        self.listaPedidos.column("#0",width=0, stretch=NO)
-        self.listaPedidos.column("id_clientes",width=50, anchor=CENTER)
-        self.listaPedidos.column("total",width=150, anchor=CENTER)
-        self.listaPedidos.column("estado",width=100, anchor=CENTER)
-        self.listaPedidos.column("pago",width=50, anchor=CENTER)
-        self.listaPedidos.column("fecha",width=150, anchor=CENTER)
-        self.listaPedidos.pack()                                 
-        self.listaPedidos.place(width=600, height=400, x=10)
+        self.listaReporteParcial=ttk.Treeview(self.marcoReporteParcial, columns= ("pedidos_id","crea","modifica","total","estado","fecha"),
+                                    displaycolumns=("pedidos_id","total","estado","fecha","crea","modifica"))
+        self.listaReporteParcial.column("#0",width=0, stretch=NO)
+        self.listaReporteParcial.column("pedidos_id",width=100, anchor=CENTER)
+        self.listaReporteParcial.column("total",width=150, anchor=CENTER)
+        self.listaReporteParcial.column("estado",width=150, anchor=CENTER)
+        self.listaReporteParcial.column("fecha",width=150, anchor=CENTER)
+        self.listaReporteParcial.column("crea",width=100, anchor=CENTER)
+        self.listaReporteParcial.column("modifica",width=100, anchor=CENTER)
+        self.listaReporteParcial.pack()                                 
+        self.listaReporteParcial.place(width=600, height=280, x=10)
         
-        self.listaPedidos.heading("#0",text="")
-        self.listaPedidos.heading("id_clientes",text="Cliente")
-        self.listaPedidos.heading("total",text="Total")
-        self.listaPedidos.heading("estado",text="Estado")
-        self.listaPedidos.heading("pago",text="Pago")
-        self.listaPedidos.heading("fecha",text="Fecha")
+        self.listaReporteParcial.heading("#0",text="")
+        self.listaReporteParcial.heading("pedidos_id",text="Pedido N°")
+        self.listaReporteParcial.heading("total",text="Total")
+        self.listaReporteParcial.heading("estado",text="Estado")
+        self.listaReporteParcial.heading("fecha",text="Fecha")
+        self.listaReporteParcial.heading("crea",text="Creado Por")
+        self.listaReporteParcial.heading("modifica",text="Modificado Por")
 
-        scrollTexto=Scrollbar(self.marcoReporte, command=self.listaPedidos.yview)   #scroll para el cuadro de texto yview posiciona el escrol verticalmente
-        scrollTexto.place(width=15, height=400, x=615)                    #el scroll toma la dimencion del cuadro de texto
-        self.listaPedidos.config(yscrollcommand=scrollTexto.set)
-
+        scrollTextoReporteParcial=Scrollbar(self.marcoReporteParcial, command=self.listaReporteParcial.yview)   #scroll para el cuadro de texto yview posiciona el escrol verticalmente
+        scrollTextoReporteParcial.place(width=15, height=280, x=615)                    #el scroll toma la dimencion del cuadro de texto
+        self.listaReporteParcial.config(yscrollcommand=scrollTextoReporteParcial.set)
+        
+        self.scrollHotizontalReporteParcial=Scrollbar(self.marcoReporteParcial, command=self.listaReporteParcial.xview, orient=HORIZONTAL)
+        self.scrollHotizontalReporteParcial.place(width=self.anchoVentana -45, height=15, x=10, y=self.altoVentana- 195)
+        self.listaReporteParcial.config(xscrollcommand=self.scrollHotizontalReporteParcial.set)
 
 
     '''#   ********************                Ventana Buscar Cliente                            ********************'''
@@ -379,133 +448,133 @@ class PizzaYa():
         self.ventanabuscarCliente.iconbitmap(self.icono)                            
 
 
-        self.marcoSuperior=LabelFrame(self.ventanabuscarCliente)
-        self.marcoSuperior.place(x=10, y=10, width=620, height=140)
-        self.marcoClientes=Frame(self.ventanabuscarCliente)
-        self.marcoClientes.place(y=170, width=640, height=300)
+        self.marcoSuperiorbuscarCliente=LabelFrame(self.ventanabuscarCliente)
+        self.marcoSuperiorbuscarCliente.place(x=10, y=10, width=620, height=140)
+        self.marcoClientesbuscarCliente=Frame(self.ventanabuscarCliente)
+        self.marcoClientesbuscarCliente.place(y=170, width=640, height=300)
             
         
-        self.eticNombre = Label(self.marcoSuperior, text="Nombre: ")
-        self.eticNombre.place(x=0,y=0)
+        self.eticNombrebuscarCliente = Label(self.marcoSuperiorbuscarCliente, text="Nombre: ")
+        self.eticNombrebuscarCliente.place(x=0,y=0)
 
-        self.eticTelefono = Label(self.marcoSuperior, text="Telefono: ")
-        self.eticTelefono.place(x=250,y=0)
+        self.eticTelefonobuscarCliente = Label(self.marcoSuperiorbuscarCliente, text="Telefono: ")
+        self.eticTelefonobuscarCliente.place(x=250,y=0)
 
 
-        self.eticCalle = Label(self.marcoSuperior, text="Calle: ")
-        self.eticCalle.place(x=0,y=50)
+        self.eticCallebuscarCliente = Label(self.marcoSuperiorbuscarCliente, text="Calle: ")
+        self.eticCallebuscarCliente.place(x=0,y=50)
 
-        self.eticAltura = Label(self.marcoSuperior, text="Altura: ")
-        self.eticAltura.place(x=180,y=50)
+        self.eticAlturabuscarCliente = Label(self.marcoSuperiorbuscarCliente, text="Altura: ")
+        self.eticAlturabuscarCliente.place(x=180,y=50)
 
-        self.eticPiso = Label(self.marcoSuperior, text="Piso: ")
-        self.eticPiso.place(x=290,y=50)
+        self.eticPisobuscarCliente = Label(self.marcoSuperiorbuscarCliente, text="Piso: ")
+        self.eticPisobuscarCliente.place(x=290,y=50)
 
-        self.eticDepartamento = Label(self.marcoSuperior, text="Departamento: ")
-        self.eticDepartamento.place(x=380,y=50)
+        self.eticDepartamentobuscarCliente = Label(self.marcoSuperiorbuscarCliente, text="Departamento: ")
+        self.eticDepartamentobuscarCliente.place(x=380,y=50)
 
-        self.eticBarrio = Label(self.marcoSuperior, text="Barrio: ")
-        self.eticBarrio.place(x=0,y=100)
+        self.eticBarriobuscarCliente = Label(self.marcoSuperiorbuscarCliente, text="Barrio: ")
+        self.eticBarriobuscarCliente.place(x=0,y=100)
         
-        self.nombre = Label(self.marcoSuperior, width=20)
-        self.nombre.place(x=55,y=0)
+        self.nombrebuscarCliente = Label(self.marcoSuperiorbuscarCliente, width=20)
+        self.nombrebuscarCliente.place(x=55,y=0)
             
-        self.textoTelefono = StringVar()
-        self.telefono = Entry(self.marcoSuperior, width=15, textvariable=self.textoTelefono)
-        self.telefono.place(x=310,y=0)
+        self.textoTelefonobuscarCliente = StringVar()
+        self.telefonobuscarCliente = Entry(self.marcoSuperiorbuscarCliente, width=15, textvariable=self.textoTelefonobuscarCliente)
+        self.telefonobuscarCliente.place(x=310,y=0)
         
             
-        self.calle = Label(self.marcoSuperior, width=15)
-        self.calle.place(x=40,y=50)
+        self.callebuscarCliente = Label(self.marcoSuperiorbuscarCliente, width=15)
+        self.callebuscarCliente.place(x=40,y=50)
         
-        self.altura = Label(self.marcoSuperior, width=6)
-        self.altura.place(x=225,y=50)
+        self.alturabuscarCliente = Label(self.marcoSuperiorbuscarCliente, width=6)
+        self.alturabuscarCliente.place(x=225,y=50)
                 
-        self.piso = Label(self.marcoSuperior, width=5)
-        self.piso.place(x=325,y=50)
+        self.pisobuscarCliente = Label(self.marcoSuperiorbuscarCliente, width=5)
+        self.pisobuscarCliente.place(x=325,y=50)
                 
-        self.departamento = Label(self.marcoSuperior, width=5)
-        self.departamento.place(x=470,y=50)
+        self.departamentobuscarCliente = Label(self.marcoSuperiorbuscarCliente, width=5)
+        self.departamentobuscarCliente.place(x=470,y=50)
 
-        self.barrio = Label(self.marcoSuperior, width=15)
-        self.barrio.place(x=45,y=100)
+        self.barriobuscarCliente = Label(self.marcoSuperiorbuscarCliente, width=15)
+        self.barriobuscarCliente.place(x=45,y=100)
 
         
-        self.clienteId=StringVar()
+        self.clienteIdbuscarCliente=StringVar()
         
         
-        self.botonBuscar = Button(self.marcoSuperior, text="Buscar", width=10, height=1, command=lambda:[ self.vaciarTabla(self.listaClientes),
-                            self.busquedaCliente(cursor, self.ventanabuscarCliente, self.listaClientes,self.telefono.get())])
-        self.botonBuscar.place(x=300,y=100)
+        self.botonBuscarbuscarCliente = Button(self.marcoSuperiorbuscarCliente, text="Buscar", width=10, height=1, command=lambda:[ self.vaciarTabla(self.listaClientesbuscarCliente),
+                            self.busquedaCliente(cursor, self.ventanabuscarCliente, self.listaClientesbuscarCliente,self.telefonobuscarCliente.get())])
+        self.botonBuscarbuscarCliente.place(x=300,y=100)
         
-        self.botonSeleccionar = Button(self.marcoSuperior, text="Seleccionar", width=10, height=1, command=lambda:[   #borra y completa los datos
+        self.botonSeleccionarbuscarCliente = Button(self.marcoSuperiorbuscarCliente, text="Seleccionar", width=10, height=1, command=lambda:[   #borra y completa los datos
                             telPedido.delete(0, "end"),nomPedido.delete(0, "end"),
-                            telPedido.insert(0,self.telefono.get()),nomPedido.insert(0,self.nombre.cget("text")),
+                            telPedido.insert(0,self.telefonobuscarCliente.get()),nomPedido.insert(0,self.nombrebuscarCliente.cget("text")),
                             calPedido.delete(0, "end"),altPedido.delete(0, "end"),
-                            calPedido.insert(0,self.calle.cget("text")),altPedido.insert(0,self.altura.cget("text")),
+                            calPedido.insert(0,self.callebuscarCliente.cget("text")),altPedido.insert(0,self.alturabuscarCliente.cget("text")),
                             pisPedido.delete(0, "end"),depPedido.delete(0, "end"),
-                            pisPedido.insert(0,self.piso.cget("text")),depPedido.insert(0,self.departamento.cget("text")),
-                            barPedido.delete(0, "end"),barPedido.insert(0,self.barrio.cget("text")),
+                            pisPedido.insert(0,self.pisobuscarCliente.cget("text")),depPedido.insert(0,self.departamentobuscarCliente.cget("text")),
+                            barPedido.delete(0, "end"),barPedido.insert(0,self.barriobuscarCliente.cget("text")),
                             self.ventanabuscarCliente.destroy()]) 
                             
-        self.botonSeleccionar.place(x=400,y=100)
+        self.botonSeleccionarbuscarCliente.place(x=400,y=100)
 
-        self.botonSalir = Button(self.marcoSuperior, text="Cancelar", width=10, height=1, command=lambda:self.ventanabuscarCliente.destroy())
-        self.botonSalir.place(x=500,y=100)
+        self.botonSalirbuscarCliente = Button(self.marcoSuperiorbuscarCliente, text="Cancelar", width=10, height=1, command=lambda:self.ventanabuscarCliente.destroy())
+        self.botonSalirbuscarCliente.place(x=500,y=100)
 
-        def click(event):
-            id= self.listaClientes.selection()[0]
-            if int(id)>0:
-                self.clienteId.set(value=(self.listaClientes.item(id, "values")[0]))
-                self.telefono.delete(0, "end")
-                tel=self.listaClientes.item(id, "values")[1]
-                self.telefono.insert(0, tel)
-                self.nombre.config(text=self.listaClientes.item(id, "values")[2])
-                self.calle.config(text=self.listaClientes.item(id, "values")[3])
-                self.altura.config(text=self.listaClientes.item(id, "values")[4])
-                self.piso.config(text=self.listaClientes.item(id, "values")[5])
-                self.departamento.config(text=self.listaClientes.item(id, "values")[6])
-                self.barrio.config(text=self.listaClientes.item(id, "values")[7])
+        def clickbuscarCliente(event):
+            idbuscarCliente= self.listaClientesbuscarCliente.selection()[0]
+            if int(idbuscarCliente)>0:
+                self.clienteIdbuscarCliente.set(value=(self.listaClientesbuscarCliente.item(idbuscarCliente, "values")[0]))
+                self.telefonobuscarCliente.delete(0, "end")
+                tel=self.listaClientesbuscarCliente.item(idbuscarCliente, "values")[1]
+                self.telefonobuscarCliente.insert(0, tel)
+                self.nombrebuscarCliente.config(text=self.listaClientesbuscarCliente.item(idbuscarCliente, "values")[2])
+                self.callebuscarCliente.config(text=self.listaClientesbuscarCliente.item(idbuscarCliente, "values")[3])
+                self.alturabuscarCliente.config(text=self.listaClientesbuscarCliente.item(idbuscarCliente, "values")[4])
+                self.pisobuscarCliente.config(text=self.listaClientesbuscarCliente.item(idbuscarCliente, "values")[5])
+                self.departamentobuscarCliente.config(text=self.listaClientesbuscarCliente.item(idbuscarCliente, "values")[6])
+                self.barriobuscarCliente.config(text=self.listaClientesbuscarCliente.item(idbuscarCliente, "values")[7])
 
-        self.listaClientes=ttk.Treeview(self.marcoClientes, columns=
+        self.listaClientesbuscarCliente=ttk.Treeview(self.marcoClientesbuscarCliente, columns=
                         ("clientes_id","telefono","nombre","calle","altura","piso","departamento","barrio"),
                         displaycolumns=("telefono","nombre","calle","altura","piso","departamento","barrio"))
-        self.listaClientes.column("#0",width=0, stretch=NO) 
-        self.listaClientes.column("telefono",width=100, anchor=CENTER) 
-        self.listaClientes.column("nombre",width=150, anchor=CENTER) 
-        self.listaClientes.column("calle",width=150, anchor=CENTER) 
-        self.listaClientes.column("altura",width=50, anchor=CENTER) 
-        self.listaClientes.column("piso",width=50, anchor=CENTER) 
-        self.listaClientes.column("departamento",width=50, anchor=CENTER)
-        self.listaClientes.column("barrio",width=150, anchor=CENTER) 
-        self.listaClientes.pack()                                 
-        self.listaClientes.place(width=600, height=270, x=10)
-        self.listaClientes.bind("<<TreeviewSelect>>", click)
+        self.listaClientesbuscarCliente.column("#0",width=0, stretch=NO) 
+        self.listaClientesbuscarCliente.column("telefono",width=100, anchor=CENTER) 
+        self.listaClientesbuscarCliente.column("nombre",width=150, anchor=CENTER) 
+        self.listaClientesbuscarCliente.column("calle",width=150, anchor=CENTER) 
+        self.listaClientesbuscarCliente.column("altura",width=50, anchor=CENTER) 
+        self.listaClientesbuscarCliente.column("piso",width=50, anchor=CENTER) 
+        self.listaClientesbuscarCliente.column("departamento",width=50, anchor=CENTER)
+        self.listaClientesbuscarCliente.column("barrio",width=150, anchor=CENTER) 
+        self.listaClientesbuscarCliente.pack()                                 
+        self.listaClientesbuscarCliente.place(width=600, height=270, x=10)
+        self.listaClientesbuscarCliente.bind("<<TreeviewSelect>>", clickbuscarCliente)
         
-        self.listaClientes.heading("#0",text="")
-        self.listaClientes.heading("telefono",text="Telefono")
-        self.listaClientes.heading("nombre",text="Nombre")
-        self.listaClientes.heading("calle",text="Calle")
-        self.listaClientes.heading("altura",text="Altura")
-        self.listaClientes.heading("piso",text="Piso")
-        self.listaClientes.heading("departamento",text="Departamento")
-        self.listaClientes.heading("barrio",text="Barrio")
+        self.listaClientesbuscarCliente.heading("#0",text="")
+        self.listaClientesbuscarCliente.heading("telefono",text="Telefono")
+        self.listaClientesbuscarCliente.heading("nombre",text="Nombre")
+        self.listaClientesbuscarCliente.heading("calle",text="Calle")
+        self.listaClientesbuscarCliente.heading("altura",text="Altura")
+        self.listaClientesbuscarCliente.heading("piso",text="Piso")
+        self.listaClientesbuscarCliente.heading("departamento",text="Departamento")
+        self.listaClientesbuscarCliente.heading("barrio",text="Barrio")
 
-        self.scrollVertical=Scrollbar(self.marcoClientes, command=self.listaClientes.yview)   #scroll para el cuadro de texto yview posiciona el escrol verticalmente
-        self.scrollVertical.place(width=15, height=270, x=615)                      #el scroll toma la dimencion del cuadro de texto
-        self.listaClientes.config(yscrollcommand=self.scrollVertical.set)
+        self.scrollVerticalbuscarCliente=Scrollbar(self.marcoClientesbuscarCliente, command=self.listaClientesbuscarCliente.yview)   #scroll para el cuadro de texto yview posiciona el escrol verticalmente
+        self.scrollVerticalbuscarCliente.place(width=15, height=270, x=615)                      #el scroll toma la dimencion del cuadro de texto
+        self.listaClientesbuscarCliente.config(yscrollcommand=self.scrollVerticalbuscarCliente.set)
         
-        self.scrollHotizontal=Scrollbar(self.marcoClientes, command=self.listaClientes.xview, orient=HORIZONTAL)
-        self.scrollHotizontal.place(width=600, height=15, x=10, y=280)
-        self.listaClientes.config(xscrollcommand=self.scrollHotizontal.set)
+        self.scrollHotizontalbuscarCliente=Scrollbar(self.marcoClientesbuscarCliente, command=self.listaClientesbuscarCliente.xview, orient=HORIZONTAL)
+        self.scrollHotizontalbuscarCliente.place(width=600, height=15, x=10, y=280)
+        self.listaClientesbuscarCliente.config(xscrollcommand=self.scrollHotizontalbuscarCliente.set)
 
-        self.consulta = "SELECT * FROM clientes WHERE visible = 1"
-        self.completarTabla(cursor,self.listaClientes,self.consulta)
+        self.sqlBuscarClientes = "SELECT clientes_id,telefono,nombre,calle,altura,piso,departamento,barrio FROM clientes WHERE activo = 1"
+        self.completarTabla(cursor,self.listaClientesbuscarCliente,self.sqlBuscarClientes)
 
 
     '''#   ********************                Ventana Nuevo Pedido                              ********************'''
 
-    def nuevoPedido(self, cursor, vent, cliente, pedidos):
+    def nuevoPedido(self, cursor, vent, cliente, pedidos, usuario):
         self.anchoVentana = 640
         self.altoVentana = 480
 
@@ -519,158 +588,460 @@ class PizzaYa():
         self.ventanaNuevoPedido.iconbitmap(self.icono)                            
 
 
-        self.marcoSuperior=LabelFrame(self.ventanaNuevoPedido)
-        self.marcoSuperior.place(x=10, y=10, width=620, height=140)
-        self.marcoMenu=LabelFrame(self.ventanaNuevoPedido)
-        self.marcoMenu.place(x=10, y=170, width=300, height=300)
-        self.marcoPedido=LabelFrame(self.ventanaNuevoPedido)
-        self.marcoPedido.place(x=330, y=170, width=300, height=300)
+        self.marcoSuperiorNP=LabelFrame(self.ventanaNuevoPedido)
+        self.marcoSuperiorNP.place(x=10, y=10, width=620, height=140)
+        self.marcoMenuNP=LabelFrame(self.ventanaNuevoPedido)
+        self.marcoMenuNP.place(x=10, y=170, width=300, height=300)
+        self.marcoPedidoNP=LabelFrame(self.ventanaNuevoPedido)
+        self.marcoPedidoNP.place(x=330, y=170, width=300, height=300)
 
-        self.menuId=IntVar()
-        self.productoId=IntVar()
-        self.listaProductos=dict()                                             # Listado de Productos seleccionados
-        self.consulta = "SELECT * FROM menu WHERE visible = 1"
+        self.menuIdNP=IntVar()
+        self.productoIdNP=IntVar()
+        self.listaProductosNP=dict()                                            # Listado de Productos seleccionados
+        self.sqlMenuNP = "SELECT menu_id,descripcion,precio_venta FROM menu WHERE activo = 1 ORDER BY descripcion ASC"
 
-        self.eticNombre = Label(self.marcoSuperior, text="Nombre: ")
-        self.eticNombre.place(x=0,y=0)
+        self.eticNombreNP = Label(self.marcoSuperiorNP, text="Nombre: ")
+        self.eticNombreNP.place(x=0,y=0)
 
-        self.eticTelefono = Label(self.marcoSuperior, text="Telefono: ")
-        self.eticTelefono.place(x=250,y=0)
+        self.eticTelefonoNP = Label(self.marcoSuperiorNP, text="Telefono: ")
+        self.eticTelefonoNP.place(x=250,y=0)
 
+        self.eticCalleNP = Label(self.marcoSuperiorNP, text="Calle: ")
+        self.eticCalleNP.place(x=0,y=50)
 
-        self.eticCalle = Label(self.marcoSuperior, text="Calle: ")
-        self.eticCalle.place(x=0,y=50)
+        self.eticAlturaNP = Label(self.marcoSuperiorNP, text="Altura: ")
+        self.eticAlturaNP.place(x=180,y=50)
 
-        self.eticAltura = Label(self.marcoSuperior, text="Altura: ")
-        self.eticAltura.place(x=180,y=50)
+        self.eticPisoNP = Label(self.marcoSuperiorNP, text="Piso: ")
+        self.eticPisoNP.place(x=290,y=50)
 
-        self.eticPiso = Label(self.marcoSuperior, text="Piso: ")
-        self.eticPiso.place(x=290,y=50)
+        self.eticDepartamentoNP = Label(self.marcoSuperiorNP, text="Departamento: ")
+        self.eticDepartamentoNP.place(x=380,y=50)
 
-        self.eticDepartamento = Label(self.marcoSuperior, text="Departamento: ")
-        self.eticDepartamento.place(x=380,y=50)
-
-        self.eticBarrio = Label(self.marcoSuperior, text="Barrio: ")
-        self.eticBarrio.place(x=0,y=100)
+        self.eticBarrioNP = Label(self.marcoSuperiorNP, text="Barrio: ")
+        self.eticBarrioNP.place(x=0,y=100)
         
-        textoNombre = StringVar()
-        nombre = Entry(self.marcoSuperior, width=20, textvariable=textoNombre)
-        nombre.place(x=55,y=0)
+        self.textoNombreNP = StringVar()
+        self.nombreNP = Entry(self.marcoSuperiorNP, width=20, textvariable=self.textoNombreNP)
+        self.nombreNP.place(x=55,y=0)
             
-        textoTelefono = StringVar()
-        telefono = Entry(self.marcoSuperior, width=15, textvariable=textoTelefono)
-        telefono.place(x=310,y=0)
+        self.textoTelefonoNP = StringVar()
+        self.telefonoNP = Entry(self.marcoSuperiorNP, width=15, textvariable=self.textoTelefonoNP)
+        self.telefonoNP.place(x=310,y=0)
+                    
+        self.textoCalleNP = StringVar()
+        self.calleNP = Entry(self.marcoSuperiorNP, width=15, textvariable=self.textoCalleNP)
+        self.calleNP.place(x=40,y=50)
         
-            
-        textoCalle = StringVar()
-        calle = Entry(self.marcoSuperior, width=15, textvariable=textoCalle)
-        calle.place(x=40,y=50)
-        
-        textoAltura = StringVar()
-        altura = Entry(self.marcoSuperior, width=6, textvariable=textoAltura)
-        altura.place(x=225,y=50)
+        self.textoAlturaNP = StringVar()
+        self.alturaNP = Entry(self.marcoSuperiorNP, width=6, textvariable=self.textoAlturaNP)
+        self.alturaNP.place(x=225,y=50)
                 
-        textoPiso = StringVar()
-        piso = Entry(self.marcoSuperior, width=5, textvariable=textoPiso)
-        piso.place(x=325,y=50)
+        self.textoPisoNP = StringVar()
+        self.pisoNP = Entry(self.marcoSuperiorNP, width=5, textvariable=self.textoPisoNP)
+        self.pisoNP.place(x=325,y=50)
                 
-        textoDepartamento = StringVar()
-        departamento = Entry(self.marcoSuperior, width=5, textvariable=textoDepartamento)
-        departamento.place(x=470,y=50)
+        self.textoDepartamentoNP = StringVar()
+        self.departamentoNP = Entry(self.marcoSuperiorNP, width=5, textvariable=self.textoDepartamentoNP)
+        self.departamentoNP.place(x=470,y=50)
 
-        textoBarrio = StringVar()
-        barrio = Entry(self.marcoSuperior, width=15, textvariable=textoBarrio)
-        barrio.place(x=45,y=100)
+        self.textoBarrioNP = StringVar()
+        self.barrioNP = Entry(self.marcoSuperiorNP, width=15, textvariable=self.textoBarrioNP)
+        self.barrioNP.place(x=45,y=100)
 
-        self.eticMenu = Label(self.marcoMenu, text="Menu", font="Arial 10 underline")
-        self.eticMenu.place(x=0,y=0)
+        self.eticMenuNP = Label(self.marcoMenuNP, text="Menu", font="Arial 10 underline")
+        self.eticMenuNP.place(x=0,y=0)
 
-        self.eticPedido = Label(self.marcoPedido, text="Pedido", font="Arial 10 underline")
-        self.eticPedido.place(x=0,y=0)
+        self.eticPedidoNP = Label(self.marcoPedidoNP, text="Pedido", font="Arial 10 underline")
+        self.eticPedidoNP.place(x=0,y=0)
 
-        self.eticTotal = Label(self.marcoPedido, text="Total")
-        self.eticTotal.place(x=10,y=250)
+        self.eticTotalNP = Label(self.marcoPedidoNP, text="Total")
+        self.eticTotalNP.place(x=10,y=250)
 
-        self.textoTotal = Label(self.marcoPedido, text="$ 0")
-        self.textoTotal.place(x=230,y=250)
+        self.textoTotalNP = Label(self.marcoPedidoNP, text="$ 0")
+        self.textoTotalNP.place(x=230,y=250)
 
 
-        self.botonBuscar = Button(self.marcoSuperior, text="Buscar Cliente", width=15, height=1, command=lambda:[self.buscarCliente(cursor,
-                            self.ventanaNuevoPedido, telefono, nombre, calle, altura, piso, departamento, barrio)])
-        self.botonBuscar.place(x=200,y=100)
-        
-        self.botonBuscar = Button(self.marcoSuperior, text="Guardar Pedido", width=15, height=1, command=lambda:[self.agregarPedido(cursor,
-                            self.ventanaNuevoPedido, cliente, pedidos, telefono.get(), nombre.get(), calle.get(), altura.get(),
-                            piso.get(), departamento.get(), barrio.get(),self.listaProductos.items()),
+        self.botonBuscarNP = Button(self.marcoSuperiorNP, text="Buscar Cliente", width=15, height=1, command=lambda:[self.buscarCliente(cursor,
+                            self.ventanaNuevoPedido, self.telefonoNP, self.nombreNP, self.calleNP, self.alturaNP, self.pisoNP, self.departamentoNP, self.barrioNP)])
+        self.botonBuscarNP.place(x=200,y=100)
+              
+        self.botonBuscar = Button(self.marcoSuperiorNP, text="Guardar Pedido", width=15, height=1, command=lambda:[self.agregarPedido(cursor,
+                            self.ventanaNuevoPedido, cliente, pedidos, self.telefonoNP.get(), self.nombreNP.get(), self.calleNP.get(), self.alturaNP.get(),
+                            self.pisoNP.get(), self.departamentoNP.get(), self.barrioNP.get(), usuario, self.listaProductosNP.items()),
                             self.vaciarTabla(self.listaPedidos),self.completarTablaPedidos(cursor, self.listaPedidos), self.ventanaNuevoPedido.destroy()])
         self.botonBuscar.place(x=350,y=100)
+       
+        self.botonSalirNP = Button(self.marcoSuperiorNP, text="Cancelar", width=10, height=1, command=lambda:self.ventanaNuevoPedido.destroy())
+        self.botonSalirNP.place(x=500,y=100)
 
-        self.botonSalir = Button(self.marcoSuperior, text="Cancelar", width=10, height=1, command=lambda:self.ventanaNuevoPedido.destroy())
-        self.botonSalir.place(x=500,y=100)
+        self.botonAgregarNP = Button(self.marcoMenuNP, text="Agregar", width=10, height=1, command=lambda:[
+            self.agregarProductoMenu(self.listaProductosNP,self.menuIdNP.get(),self.ventanaNuevoPedido),self.vaciarTabla(self.listaPedidoNP),
+                self.completarTablaProductosMenu(cursor,self.listaPedidoNP, self.listaProductosNP, self.textoTotalNP)])
+        self.botonAgregarNP.place(x=190,y=10)
 
-        self.botonAgregar = Button(self.marcoMenu, text="Agregar", width=10, height=1, command=lambda:[
-            self.agregarProductoMenu(self.listaProductos,self.menuId.get(),self.ventanaNuevoPedido),self.vaciarTabla(self.listaPedido),
-                self.completarTablaProductosMenu(cursor,self.listaPedido, "menu", self.listaProductos.items(), self.textoTotal)])
-        self.botonAgregar.place(x=190,y=10)
+        self.botonBorrarNP = Button(self.marcoPedidoNP, text="Borrar", width=10, height=1, command=lambda:[
+            self.eliminarProductoMenu(self.listaProductosNP,self.productoIdNP.get()),self.vaciarTabla(self.listaPedidoNP),
+                self.completarTablaProductosMenu(cursor,self.listaPedidoNP, self.listaProductosNP, self.textoTotalNP)])
+        self.botonBorrarNP.place(x=190,y=10)
 
-        self.botonBorrar = Button(self.marcoPedido, text="Borrar", width=10, height=1, command=lambda:[
-            self.eliminarProductoMenu(self.listaProductos,self.productoId.get()),self.vaciarTabla(self.listaPedido),
-                self.completarTablaProductosMenu(cursor,self.listaPedido, "menu", self.listaProductos.items(), self.textoTotal)])
-        self.botonBorrar.place(x=190,y=10)
-
-        def clickMenu(event):
-            id= self.listaMenu.selection()[0]
-            if int(id)>0:
-                self.menuId.set(value=(self.listaMenu.item(id, "values")[0]))
+        def clickMenuNP(event):
+            idclickMenuNP = self.listaMenuNP.selection()[0]
+            if int(idclickMenuNP)>0:
+                self.menuIdNP.set(value=(self.listaMenuNP.item(idclickMenuNP, "values")[0]))
                             
-        def clickPedido(event):
-            id= self.listaPedido.selection()[0]
-            if int(id)>0:
-                self.productoId.set(value=(self.listaMenu.item(id, "values")[0]))
-                
-        self.listaMenu=ttk.Treeview(self.marcoMenu, columns=("menu_id","descripcion","precio_venta"),
+        def clickPedidoNP(event):
+            idclickPedidoNP= self.listaPedidoNP.selection()[0]
+            if int(idclickPedidoNP)>0:
+                self.productoIdNP.set(value=(self.listaMenuNP.item(idclickPedidoNP, "values")[0]))
+         
+        self.listaMenuNP=ttk.Treeview(self.marcoMenuNP, columns=("menu_id","descripcion","precio_venta"),
                                     displaycolumns=("descripcion","precio_venta"))
-        self.listaMenu.column("#0",width=0, stretch=NO) 
-        self.listaMenu.column("descripcion",width=150)
-        self.listaMenu.column("precio_venta",width=50, anchor=CENTER)
-        self.listaMenu.pack()                                 
-        self.listaMenu.place(width=260, height=220, x=10, y=50)
-        self.listaMenu.bind("<<TreeviewSelect>>", clickMenu)
+        self.listaMenuNP.column("#0",width=0, stretch=NO) 
+        self.listaMenuNP.column("descripcion",width=150)
+        self.listaMenuNP.column("precio_venta",width=50, anchor=CENTER)
+        self.listaMenuNP.pack()                                 
+        self.listaMenuNP.place(width=260, height=220, x=10, y=50)
+        self.listaMenuNP.bind("<<TreeviewSelect>>", clickMenuNP)
         
-        self.listaMenu.heading("#0",text="")
-        self.listaMenu.heading("descripcion",text="Descripcion")
-        self.listaMenu.heading("precio_venta",text="Precio")
+        self.listaMenuNP.heading("#0",text="")
+        self.listaMenuNP.heading("descripcion",text="Descripcion")
+        self.listaMenuNP.heading("precio_venta",text="Precio")
 
-        self.scrollVertical=Scrollbar(self.marcoMenu, command=self.listaMenu.yview)   #scroll para el cuadro de texto yview posiciona el escrol verticalmente
-        self.scrollVertical.place(width=15, height=220, x=275, y=50)                      #el scroll toma la dimencion del cuadro de texto
-        self.listaMenu.config(yscrollcommand=self.scrollVertical.set)
+        self.scrollVerticalNP=Scrollbar(self.marcoMenuNP, command=self.listaMenuNP.yview)   #scroll para el cuadro de texto yview posiciona el escrol verticalmente
+        self.scrollVerticalNP.place(width=15, height=220, x=275, y=50)                      #el scroll toma la dimencion del cuadro de texto
+        self.listaMenuNP.config(yscrollcommand=self.scrollVerticalNP.set)
         
-        self.listaPedido=ttk.Treeview(self.marcoPedido, columns=("unidades","menu_id","descripcion","precio_venta"),
+        self.listaPedidoNP=ttk.Treeview(self.marcoPedidoNP, columns=("unidades","menu_id","descripcion","precio_venta"),
                                     displaycolumns=("unidades","descripcion","precio_venta"))
-        self.listaPedido.column("#0",width=0, stretch=NO) 
-        self.listaPedido.column("unidades",width=20, anchor=CENTER)
-        self.listaPedido.column("descripcion",width=150)
-        self.listaPedido.column("precio_venta",width=50, anchor=CENTER)
-        self.listaPedido.pack()                                 
-        self.listaPedido.place(width=260, height=200, x=10, y=50)
-        self.listaPedido.bind("<<TreeviewSelect>>", clickPedido)
+        self.listaPedidoNP.column("#0",width=0, stretch=NO) 
+        self.listaPedidoNP.column("unidades",width=20, anchor=CENTER)
+        self.listaPedidoNP.column("descripcion",width=150)
+        self.listaPedidoNP.column("precio_venta",width=50, anchor=CENTER)
+        self.listaPedidoNP.pack()                                 
+        self.listaPedidoNP.place(width=260, height=200, x=10, y=50)
+        self.listaPedidoNP.bind("<<TreeviewSelect>>", clickPedidoNP)
         
-        self.listaPedido.heading("#0",text="")
-        self.listaPedido.heading("unidades",text="")
-        self.listaPedido.heading("descripcion",text="Descripcion")
-        self.listaPedido.heading("precio_venta",text="Precio")
+        self.listaPedidoNP.heading("#0",text="")
+        self.listaPedidoNP.heading("unidades",text="")
+        self.listaPedidoNP.heading("descripcion",text="Descripcion")
+        self.listaPedidoNP.heading("precio_venta",text="Precio")
 
-        self.scrollVerticalPed=Scrollbar(self.marcoPedido, command=self.listaPedido.yview)   #scroll para el cuadro de texto yview posiciona el escrol verticalmente
+        self.scrollVerticalPedNP=Scrollbar(self.marcoPedidoNP, command=self.listaPedidoNP.yview)   #scroll para el cuadro de texto yview posiciona el escrol verticalmente
+        self.scrollVerticalPedNP.place(width=15, height=200, x=275, y=50)                      #el scroll toma la dimencion del cuadro de texto
+        self.listaPedidoNP.config(yscrollcommand=self.scrollVerticalPedNP.set)
+        
+
+        self.completarTabla(cursor,self.listaMenuNP,self.sqlMenuNP)
+
+
+    '''#   ********************                Ventana Actualizacion Precios por Producto                     ********************'''
+    
+    def preciosPorProducto(self, cursor, vent, menu, usuario):
+        self.anchoVentana = 640
+        self.altoVentana = 480
+
+        self.ventanaPreciosPorProducto = Tk()
+        self.xventana = int(vent.winfo_screenwidth()/2 - self.anchoVentana/2)
+        self.yventana = int(vent.winfo_screenheight()/2 - self.altoVentana/1.7)
+        self.ventanaPreciosPorProducto.geometry(str(self.anchoVentana) + "x" + str(self.altoVentana)
+        + "+" + str(self.xventana) + "+" + str(self.yventana))                       
+        self.ventanaPreciosPorProducto.resizable(0,0)                                     
+        self.ventanaPreciosPorProducto.title("Actualizacion de Precios por Producto")                                  
+        self.ventanaPreciosPorProducto.iconbitmap(self.icono)                            
+
+
+        self.marcoSuperiorPreciosPorProducto=LabelFrame(self.ventanaPreciosPorProducto)
+        self.marcoSuperiorPreciosPorProducto.place(x=10, y=10, width=620, height=140)
+        self.marcoMenuActualPP=LabelFrame(self.ventanaPreciosPorProducto)
+        self.marcoMenuActualPP.place(x=10, y=170, width=300, height=300)
+        self.marcoMenuNuevoPP=LabelFrame(self.ventanaPreciosPorProducto)
+        self.marcoMenuNuevoPP.place(x=330, y=170, width=300, height=300)
+
+        self.menuIdPrecioPP=IntVar()
+        self.productoIdPrecioPP=IntVar()
+        self.listaPrecioProductos=list()                                             # Listado de Productos seleccionados
+        self.opcionModificacionPP=IntVar()
+        self.sqlMenuPP = "SELECT menu_id,descripcion,precio_venta FROM menu WHERE activo = 1 ORDER BY descripcion ASC"
+
+        self.aumentoPorPP=Radiobutton(self.marcoSuperiorPreciosPorProducto, text="Aumentar: %", variable=self.opcionModificacionPP, value=1,
+                                    command=lambda:[self.aumentoPorcentrajePP.config(state="normal"), self.opcionModificacionPP.set(1),
+                                    self.rebajaPorcentajePP.delete(0, "end"),self.rebajaPorcentajePP.config(state="disable"),
+                                    self.aumentoFijoPP.delete(0, "end"),self.aumentoFijoPP.config(state="disable"),
+                                    self.rebajaFijoPP.delete(0, "end"),self.rebajaFijo.PPconfig(state="disable")])
+        self.aumentoPorPP.place(x=10, y=10)
+        
+        self.rebajaPorPP=Radiobutton(self.marcoSuperiorPreciosPorProducto, text="Rebajar: %", variable=self.opcionModificacionPP, value=2,
+                                    command=lambda:[self.aumentoPorcentrajePP.delete(0, "end"),self.aumentoPorcentrajePP.config(state="disable"),
+                                    self.rebajaPorcentajePP.config(state="normal"), self.opcionModificacionPP.set(2),
+                                    self.aumentoFijoPP.delete(0, "end"),self.aumentoFijoPP.config(state="disable"),
+                                    self.rebajaFijoPP.delete(0, "end"),self.rebajaFijoPP.config(state="disable")])
+        self.rebajaPorPP.place(x=300, y=10)
+        
+        self.aumentoFijPP=Radiobutton(self.marcoSuperiorPreciosPorProducto, text="Aumentar: $", variable=self.opcionModificacionPP, value=3,
+                                    command=lambda:[self.aumentoPorcentrajePP.delete(0, "end"),self.aumentoPorcentrajePP.config(state="disable"),
+                                    self.rebajaPorcentajePP.delete(0, "end"),self.rebajaPorcentajePP.config(state="disable"),
+                                    self.aumentoFijoPP.config(state="normal"), self.opcionModificacionPP.set(3),
+                                    self.rebajaFijoPP.delete(0, "end"),self.rebajaFijoPP.config(state="disable")])
+        self.aumentoFijPP.place(x=10, y=60)
+        
+        self.rebajaFijPP=Radiobutton(self.marcoSuperiorPreciosPorProducto, text="Rebajar: $", variable=self.opcionModificacionPP, value=4,
+                                    command=lambda:[self.aumentoPorcentrajePP.delete(0, "end"),self.aumentoPorcentrajePP.config(state="disable"),
+                                    self.rebajaPorcentajePP.delete(0, "end"),self.rebajaPorcentajePP.config(state="disable"),
+                                    self.aumentoFijoPP.delete(0, "end"),self.aumentoFijoPP.config(state="disable"), self.opcionModificacionPP.set(4),
+                                    self.rebajaFijoPP.config(state="normal")])
+        self.rebajaFijPP.place(x=300, y=60)
+        
+               
+        self.textoAumentoPorcentrajePP = StringVar()
+        self.aumentoPorcentrajePP = Entry(self.marcoSuperiorPreciosPorProducto, width=10, textvariable=self.textoAumentoPorcentrajePP, state="disable")
+        self.aumentoPorcentrajePP.place(x=110,y=10)
+            
+        self.textoRebajaPorcentajePP = StringVar()
+        self.rebajaPorcentajePP = Entry(self.marcoSuperiorPreciosPorProducto, width=10, textvariable=self.textoRebajaPorcentajePP, state="disable")
+        self.rebajaPorcentajePP.place(x=385,y=10)
+                    
+        self.textoAumentoFijoPP = StringVar()
+        self.aumentoFijoPP = Entry(self.marcoSuperiorPreciosPorProducto, width=10, textvariable=self.textoAumentoFijoPP, state="disable")
+        self.aumentoFijoPP.place(x=110,y=60)
+        
+        self.textoRebajaFijoPP = StringVar()
+        self.rebajaFijoPP = Entry(self.marcoSuperiorPreciosPorProducto, width=10, textvariable=self.textoRebajaFijoPP, state="disable")
+        self.rebajaFijoPP.place(x=385,y=60)
+        
+        self.eticMenuActualPP = Label(self.marcoMenuActualPP, text="Menu Actual", font="Arial 10 underline")
+        self.eticMenuActualPP.place(x=0,y=0)
+
+        self.eticMenuNuevoPP = Label(self.marcoMenuNuevoPP, text="Productos con Precio Actualizado", font="Arial 10 underline")
+        self.eticMenuNuevoPP.place(x=0,y=0)
+
+        self.botonBuscarPP = Button(self.marcoSuperiorPreciosPorProducto, text="Actualizar Lista", width=15, height=1, command=lambda:[
+                                    self.vaciarTabla(self.listaMenuNuevoPP),
+                                    self.completarTablaProductosMenuActualizado(cursor,self.listaMenuNuevoPP, self.listaPrecioProductos,
+                                    self.opcionModificacionPP.get(),self.aumentoPorcentrajePP.get(), self.rebajaPorcentajePP.get(),
+                                    self.aumentoFijoPP.get(),self.rebajaFijoPP.get(),self.ventanaPreciosPorProducto)])
+        self.botonBuscarPP.place(x=200,y=100)
+        
+        self.botonBuscarPP = Button(self.marcoSuperiorPreciosPorProducto, text="Cambiar Precios", width=15, height=1, command=lambda:[
+                                    self.cambiarPrecioMenuActualizado(cursor,self.listaMenuNuevoPP, self.listaPrecioProductos,
+                                    self.opcionModificacionPP.get(),self.aumentoPorcentrajePP.get(), self.rebajaPorcentajePP.get(),
+                                    self.aumentoFijoPP.get(),self.rebajaFijoPP.get(),self.ventanaPreciosPorProducto,menu,usuario)])
+        self.botonBuscarPP.place(x=350,y=100)
+
+        self.botonSalirPP = Button(self.marcoSuperiorPreciosPorProducto, text="Cancelar", width=10, height=1, command=lambda:self.ventanaPreciosPorProducto.destroy())
+        self.botonSalirPP.place(x=500,y=100)
+
+        self.botonAgregarPP = Button(self.marcoMenuActualPP, text="Agregar", width=10, height=1, command=lambda:[
+                self.agregarProductoMenuActualizado(self.listaPrecioProductos,self.menuIdPrecioPP.get(),self.ventanaPreciosPorProducto),
+                self.vaciarTabla(self.listaMenuNuevoPP),
+                self.completarTablaProductosMenuActualizado(cursor,self.listaMenuNuevoPP, self.listaPrecioProductos,self.opcionModificacionPP.get(),
+                                                            self.aumentoPorcentrajePP.get(), self.rebajaPorcentajePP.get(),self.aumentoFijoPP.get(),
+                                                            self.rebajaFijoPP.get(),self.ventanaPreciosPorProducto)])
+        self.botonAgregarPP.place(x=190,y=10)
+
+        self.botonBorrarPP = Button(self.marcoMenuNuevoPP, text="Borrar", width=10, height=1, command=lambda:[
+                self.eliminarProductoMenuActualizado(self.listaPrecioProductos,self.productoIdPrecioPP.get()),
+                self.vaciarTabla(self.listaMenuNuevoPP),
+                self.completarTablaProductosMenuActualizado(cursor,self.listaMenuNuevoPP, self.listaPrecioProductos,self.opcionModificacionPP.get(),
+                                                            self.aumentoPorcentrajePP.get(), self.rebajaPorcentajePP.get(),self.aumentoFijoPP.get(),
+                                                            self.rebajaFijoPP.get(),self.ventanaPreciosPorProducto)])
+        self.botonBorrarPP.place(x=190,y=10)
+
+        def clickMenuActualPP(event):
+            idPP= self.listaMenuActualPP.selection()[0]
+            if int(idPP)>0:
+                self.menuIdPrecioPP.set(value=(self.listaMenuActualPP.item(idPP, "values")[0]))
+                
+        def clickMenuNuevoPP(event):
+            idPPN= self.listaMenuNuevoPP.selection()[0]
+            if int(idPPN)>0:
+                self.productoIdPrecioPP.set(value=(self.listaMenuNuevoPP.item(idPPN, "values")[0]))
+                
+        self.listaMenuActualPP=ttk.Treeview(self.marcoMenuActualPP, columns=("menu_id","descripcion","precio_venta"),
+                                    displaycolumns=("descripcion","precio_venta"))
+        self.listaMenuActualPP.column("#0",width=0, stretch=NO) 
+        self.listaMenuActualPP.column("descripcion",width=150)
+        self.listaMenuActualPP.column("precio_venta",width=50, anchor=CENTER)
+        self.listaMenuActualPP.pack()                                 
+        self.listaMenuActualPP.place(width=260, height=220, x=10, y=50)
+        self.listaMenuActualPP.bind("<<TreeviewSelect>>", clickMenuActualPP)
+        
+        self.listaMenuActualPP.heading("#0",text="")
+        self.listaMenuActualPP.heading("descripcion",text="Descripcion")
+        self.listaMenuActualPP.heading("precio_venta",text="Precio")
+
+        self.scrollVertical=Scrollbar(self.marcoMenuActualPP, command=self.listaMenuActualPP.yview)   #scroll para el cuadro de texto yview posiciona el escrol verticalmente
+        self.scrollVertical.place(width=15, height=220, x=275, y=50)                      #el scroll toma la dimencion del cuadro de texto
+        self.listaMenuActualPP.config(yscrollcommand=self.scrollVertical.set)
+        
+        self.listaMenuNuevoPP=ttk.Treeview(self.marcoMenuNuevoPP, columns=("menu_id","descripcion","precio_venta"),
+                                    displaycolumns=("descripcion","precio_venta"))
+        self.listaMenuNuevoPP.column("#0",width=0, stretch=NO) 
+        self.listaMenuNuevoPP.column("descripcion",width=150)
+        self.listaMenuNuevoPP.column("precio_venta",width=50, anchor=CENTER)
+        self.listaMenuNuevoPP.pack()                                 
+        self.listaMenuNuevoPP.place(width=260, height=220, x=10, y=50)
+        self.listaMenuNuevoPP.bind("<<TreeviewSelect>>", clickMenuNuevoPP)
+        
+        self.listaMenuNuevoPP.heading("#0",text="")
+        self.listaMenuNuevoPP.heading("descripcion",text="Descripcion")
+        self.listaMenuNuevoPP.heading("precio_venta",text="Precio")
+
+        self.scrollVerticalPed=Scrollbar(self.marcoMenuNuevoPP, command=self.listaMenuNuevoPP.yview)   #scroll para el cuadro de texto yview posiciona el escrol verticalmente
         self.scrollVerticalPed.place(width=15, height=200, x=275, y=50)                      #el scroll toma la dimencion del cuadro de texto
-        self.listaPedido.config(yscrollcommand=self.scrollVerticalPed.set)
+        self.listaMenuNuevoPP.config(yscrollcommand=self.scrollVerticalPed.set)
         
 
-        self.completarTabla(cursor,self.listaMenu,self.consulta)
+        self.completarTabla(cursor,self.listaMenuActualPP,self.sqlMenuPP)
 
 
+
+    '''#   ********************                Ventana Actualizacion Precios por Categoria                     ********************'''
+
+    def preciosPorCategoria(self, cursor, vent, menu, usuario):
+        self.anchoVentana = 640
+        self.altoVentana = 480
+
+        self.ventanaPreciosPorCategoria = Tk()
+        self.xventana = int(vent.winfo_screenwidth()/2 - self.anchoVentana/2)
+        self.yventana = int(vent.winfo_screenheight()/2 - self.altoVentana/1.7)
+        self.ventanaPreciosPorCategoria.geometry(str(self.anchoVentana) + "x" + str(self.altoVentana)
+        + "+" + str(self.xventana) + "+" + str(self.yventana))                       
+        self.ventanaPreciosPorCategoria.resizable(0,0)                                     
+        self.ventanaPreciosPorCategoria.title("Actualizacion de Precios por Categorias")                                  
+        self.ventanaPreciosPorCategoria.iconbitmap(self.icono)                            
+
+
+        self.marcoSuperiorPreciosPorCategoria=LabelFrame(self.ventanaPreciosPorCategoria)
+        self.marcoSuperiorPreciosPorCategoria.place(x=10, y=10, width=620, height=140)
+        self.marcoMenuActual=LabelFrame(self.ventanaPreciosPorCategoria)
+        self.marcoMenuActual.place(x=10, y=170, width=300, height=300)
+        self.marcoMenuNuevo=LabelFrame(self.ventanaPreciosPorCategoria)
+        self.marcoMenuNuevo.place(x=330, y=170, width=300, height=300)
+
+        self.opcionModificacion=IntVar()
+        self.sqlMenuPC = "SELECT menu_id,descripcion,precio_venta FROM menu WHERE activo = 1 ORDER BY descripcion ASC"
+
+        self.aumentoPor=Radiobutton(self.marcoSuperiorPreciosPorCategoria, text="Aumentar: %", variable=self.opcionModificacion, value=1,
+                                    command=lambda:[self.aumentoPorcentraje.config(state="normal"), self.opcionModificacion.set(1),
+                                    self.rebajaPorcentaje.delete(0, "end"),self.rebajaPorcentaje.config(state="disable"),
+                                    self.aumentoFijo.delete(0, "end"),self.aumentoFijo.config(state="disable"),
+                                    self.rebajaFijo.delete(0, "end"),self.rebajaFijo.config(state="disable")])
+        self.aumentoPor.place(x=10, y=10)
+        
+        self.rebajaPor=Radiobutton(self.marcoSuperiorPreciosPorCategoria, text="Rebajar: %", variable=self.opcionModificacion, value=2,
+                                    command=lambda:[self.aumentoPorcentraje.delete(0, "end"),self.aumentoPorcentraje.config(state="disable"),
+                                    self.rebajaPorcentaje.config(state="normal"), self.opcionModificacion.set(2),
+                                    self.aumentoFijo.delete(0, "end"),self.aumentoFijo.config(state="disable"),
+                                    self.rebajaFijo.delete(0, "end"),self.rebajaFijo.config(state="disable")])
+        self.rebajaPor.place(x=200, y=10)
+        
+        self.aumentoFij=Radiobutton(self.marcoSuperiorPreciosPorCategoria, text="Aumentar: $", variable=self.opcionModificacion, value=3,
+                                    command=lambda:[self.aumentoPorcentraje.delete(0, "end"),self.aumentoPorcentraje.config(state="disable"),
+                                    self.rebajaPorcentaje.delete(0, "end"),self.rebajaPorcentaje.config(state="disable"),
+                                    self.aumentoFijo.config(state="normal"), self.opcionModificacion.set(3),
+                                    self.rebajaFijo.delete(0, "end"),self.rebajaFijo.config(state="disable")])
+        self.aumentoFij.place(x=10, y=60)
+        
+        self.rebajaFij=Radiobutton(self.marcoSuperiorPreciosPorCategoria, text="Rebajar: $", variable=self.opcionModificacion, value=4,
+                                    command=lambda:[self.aumentoPorcentraje.delete(0, "end"),self.aumentoPorcentraje.config(state="disable"),
+                                    self.rebajaPorcentaje.delete(0, "end"),self.rebajaPorcentaje.config(state="disable"),
+                                    self.aumentoFijo.delete(0, "end"),self.aumentoFijo.config(state="disable"), self.opcionModificacion.set(4),
+                                    self.rebajaFijo.config(state="normal")])
+        self.rebajaFij.place(x=200, y=60)
+        
+               
+        self.textoAumentoPorcentraje = StringVar()
+        self.aumentoPorcentraje = Entry(self.marcoSuperiorPreciosPorCategoria, width=10, textvariable=self.textoAumentoPorcentraje, state="disable")
+        self.aumentoPorcentraje.place(x=110,y=10)
+            
+        self.textoRebajaPorcentaje = StringVar()
+        self.rebajaPorcentaje = Entry(self.marcoSuperiorPreciosPorCategoria, width=10, textvariable=self.textoRebajaPorcentaje, state="disable")
+        self.rebajaPorcentaje.place(x=285,y=10)
+                    
+        self.textoAumentoFijo = StringVar()
+        self.aumentoFijo = Entry(self.marcoSuperiorPreciosPorCategoria, width=10, textvariable=self.textoAumentoFijo, state="disable")
+        self.aumentoFijo.place(x=110,y=60)
+        
+        self.textoRebajaFijo = StringVar()
+        self.rebajaFijo = Entry(self.marcoSuperiorPreciosPorCategoria, width=10, textvariable=self.textoRebajaFijo, state="disable")
+        self.rebajaFijo.place(x=285,y=60)
+        
+        self.eticMenuActual = Label(self.marcoSuperiorPreciosPorCategoria, text="Actualizar Categoria")
+        self.eticMenuActual.place(x=435,y=10)
+
+        self.listaCategoriaProducto = self.completarListaCategoria(cursor)
+        self.categoriaProducto = Combobox(self.marcoSuperiorPreciosPorCategoria, width=20, state="readonly", values=self.listaCategoriaProducto)
+        self.categoriaProducto.place(x=420,y=35)
+
+        self.eticMenuActual = Label(self.marcoMenuActual, text="Menu Actual", font="Arial 10 underline")
+        self.eticMenuActual.place(x=0,y=0)
+
+        self.eticMenuNuevo = Label(self.marcoMenuNuevo, text="Productos con Precio Actualizado", font="Arial 10 underline")
+        self.eticMenuNuevo.place(x=0,y=0)
+
+        self.botonBuscar = Button(self.marcoSuperiorPreciosPorCategoria, text="Actualizar Lista", width=15, height=1, command=lambda:[
+                                    self.vaciarTabla(self.listaMenuNuevo),
+                                    self.completarTablaProductosCatMenuActualizado(cursor,self.listaMenuNuevo,self.opcionModificacion.get(),
+                                    self.categoriaProducto.get(), self.aumentoPorcentraje.get(),self.rebajaPorcentaje.get(),self.aumentoFijo.get(),
+                                    self.rebajaFijo.get(),self.ventanaPreciosPorCategoria),
+                                    self.vaciarTabla(self.listaMenuActual),
+                                    self.completarTabla(cursor,self.listaMenuActual,("SELECT menu.menu_id,menu.descripcion,menu.precio_venta FROM menu "+
+                                                        "INNER JOIN categorias_menu ON menu.id_categorias_menu=categorias_menu.categorias_menu_id "+
+                                                        "WHERE menu.activo = 1 AND categorias_menu.activo = 1 AND categorias_menu.descripcion = '"+
+                                                        self.categoriaProducto.get()+"' ORDER BY menu.descripcion ASC"))])
+        self.botonBuscar.place(x=200,y=100)
+        
+        self.botonBuscar = Button(self.marcoSuperiorPreciosPorCategoria, text="Cambiar Precios", width=15, height=1, command=lambda:[
+                                    self.cambiarPrecioCatMenuActualizado(cursor,self.listaMenuNuevo,self.opcionModificacion.get(),
+                                    self.categoriaProducto.get(),self.aumentoPorcentraje.get(), self.rebajaPorcentaje.get(),
+                                    self.aumentoFijo.get(),self.rebajaFijo.get(),self.ventanaPreciosPorCategoria,menu,usuario)])
+        self.botonBuscar.place(x=350,y=100)
+
+        self.botonSalir = Button(self.marcoSuperiorPreciosPorCategoria, text="Cancelar", width=10, height=1, command=lambda:self.ventanaPreciosPorCategoria.destroy())
+        self.botonSalir.place(x=500,y=100)
+         
+        self.listaMenuActual=ttk.Treeview(self.marcoMenuActual, columns=("menu_id","descripcion","precio_venta"),
+                                    displaycolumns=("descripcion","precio_venta"), cursor="plus")
+        self.listaMenuActual.column("#0",width=0, stretch=NO) 
+        self.listaMenuActual.column("descripcion",width=150)
+        self.listaMenuActual.column("precio_venta",width=50, anchor=CENTER)
+        self.listaMenuActual.pack()                                 
+        self.listaMenuActual.place(width=260, height=220, x=10, y=50)
+        self.listaMenuActual.bind("<<TreeviewSelect>>")
+        
+        self.listaMenuActual.heading("#0",text="")
+        self.listaMenuActual.heading("descripcion",text="Descripcion")
+        self.listaMenuActual.heading("precio_venta",text="Precio")
+
+        self.scrollVertical=Scrollbar(self.marcoMenuActual, command=self.listaMenuActual.yview)   #scroll para el cuadro de texto yview posiciona el escrol verticalmente
+        self.scrollVertical.place(width=15, height=220, x=275, y=50)                      #el scroll toma la dimencion del cuadro de texto
+        self.listaMenuActual.config(yscrollcommand=self.scrollVertical.set)
+        
+        self.listaMenuNuevo=ttk.Treeview(self.marcoMenuNuevo, columns=("menu_id","descripcion","precio_venta"),
+                                    displaycolumns=("descripcion","precio_venta"), cursor="x_cursor")
+        self.listaMenuNuevo.column("#0",width=0, stretch=NO) 
+        self.listaMenuNuevo.column("descripcion",width=150)
+        self.listaMenuNuevo.column("precio_venta",width=50, anchor=CENTER)
+        self.listaMenuNuevo.pack()                                 
+        self.listaMenuNuevo.place(width=260, height=220, x=10, y=50)
+        self.listaMenuNuevo.bind("<<TreeviewSelect>>")
+        
+        self.listaMenuNuevo.heading("#0",text="")
+        self.listaMenuNuevo.heading("descripcion",text="Descripcion")
+        self.listaMenuNuevo.heading("precio_venta",text="Precio")
+
+        self.scrollVerticalPed=Scrollbar(self.marcoMenuNuevo, command=self.listaMenuNuevo.yview)   #scroll para el cuadro de texto yview posiciona el escrol verticalmente
+        self.scrollVerticalPed.place(width=15, height=200, x=275, y=50)                      #el scroll toma la dimencion del cuadro de texto
+        self.listaMenuNuevo.config(yscrollcommand=self.scrollVerticalPed.set)
+        
+
+        self.completarTabla(cursor,self.listaMenuActual,self.sqlMenuPC)
+
+    
     '''#   ********************                Ventana Clientes                                  ********************'''
 
-    def clientes(self, cursor, vent, cliente):
+    def clientes(self, cursor, vent, cliente, usuario):
         self.anchoVentana = 640
         self.altoVentana = 480
 
@@ -680,121 +1051,126 @@ class PizzaYa():
         self.ventanaClientes.geometry(str(self.anchoVentana) + "x" + str(self.altoVentana)
         + "+" + str(self.xventana) + "+" + str(self.yventana))                       
         self.ventanaClientes.resizable(0,0)                                     
-        self.ventanaClientes.title("clientes")                                  
+        self.ventanaClientes.title("Clientes")                          
         self.ventanaClientes.iconbitmap(self.icono)                            
 
 
-        self.marcoSuperior=LabelFrame(self.ventanaClientes)
-        self.marcoSuperior.place(x=10, y=10, width=620, height=140)
+        self.marcoSuperiorClientes=LabelFrame(self.ventanaClientes)
+        self.marcoSuperiorClientes.place(x=10, y=10, width=620, height=140)
         self.marcoClientes=Frame(self.ventanaClientes)
         self.marcoClientes.place(y=170, width=640, height=300)
             
         
-        self.eticNombre = Label(self.marcoSuperior, text="Nombre: ")
-        self.eticNombre.place(x=0,y=0)
+        self.eticNombreClientes = Label(self.marcoSuperiorClientes, text="Nombre: ")
+        self.eticNombreClientes.place(x=0,y=0)
 
-        self.eticTelefono = Label(self.marcoSuperior, text="Telefono: ")
-        self.eticTelefono.place(x=250,y=0)
+        self.eticTelefonoClientes = Label(self.marcoSuperiorClientes, text="Telefono: ")
+        self.eticTelefonoClientes.place(x=250,y=0)
 
 
-        self.eticCalle = Label(self.marcoSuperior, text="Calle: ")
-        self.eticCalle.place(x=0,y=50)
+        self.eticCalleClientes = Label(self.marcoSuperiorClientes, text="Calle: ")
+        self.eticCalleClientes.place(x=0,y=50)
 
-        self.eticAltura = Label(self.marcoSuperior, text="Altura: ")
-        self.eticAltura.place(x=180,y=50)
+        self.eticAlturaClientes = Label(self.marcoSuperiorClientes, text="Altura: ")
+        self.eticAlturaClientes.place(x=180,y=50)
 
-        self.eticPiso = Label(self.marcoSuperior, text="Piso: ")
-        self.eticPiso.place(x=290,y=50)
+        self.eticPisoClientes = Label(self.marcoSuperiorClientes, text="Piso: ")
+        self.eticPisoClientes.place(x=290,y=50)
 
-        self.eticDepartamento = Label(self.marcoSuperior, text="Departamento: ")
-        self.eticDepartamento.place(x=380,y=50)
+        self.eticDepartamentoClientes = Label(self.marcoSuperiorClientes, text="Departamento: ")
+        self.eticDepartamentoClientes.place(x=380,y=50)
 
-        self.eticBarrio = Label(self.marcoSuperior, text="Barrio: ")
-        self.eticBarrio.place(x=0,y=100)
+        self.eticBarrioClientes = Label(self.marcoSuperiorClientes, text="Barrio: ")
+        self.eticBarrioClientes.place(x=0,y=100)
         
-        self.textoNombre = StringVar()
-        self.nombre = Entry(self.marcoSuperior, width=20, textvariable=self.textoNombre)
-        self.nombre.place(x=55,y=0)
+        self.textoNombreClientes = StringVar()
+        self.nombreClientes = Entry(self.marcoSuperiorClientes, width=20, textvariable=self.textoNombreClientes)
+        self.nombreClientes.place(x=55,y=0)
             
-        self.textoTelefono = StringVar()
-        self.telefono = Entry(self.marcoSuperior, width=15, textvariable=self.textoTelefono)
-        self.telefono.place(x=310,y=0)
+        self.textoTelefonoClientes = StringVar()
+        self.telefonoClientes = Entry(self.marcoSuperiorClientes, width=15, textvariable=self.textoTelefonoClientes)
+        self.telefonoClientes.place(x=310,y=0)
         
             
-        self.textoCalle = StringVar()
-        self.calle = Entry(self.marcoSuperior, width=15, textvariable=self.textoCalle)
-        self.calle.place(x=40,y=50)
+        self.textoCalleClientes = StringVar()
+        self.calleClientes = Entry(self.marcoSuperiorClientes, width=15, textvariable=self.textoCalleClientes)
+        self.calleClientes.place(x=40,y=50)
         
-        self.textoAltura = StringVar()
-        self.altura = Entry(self.marcoSuperior, width=6, textvariable=self.textoAltura)
-        self.altura.place(x=225,y=50)
+        self.textoAlturaClientes = StringVar()
+        self.alturaClientes = Entry(self.marcoSuperiorClientes, width=6, textvariable=self.textoAlturaClientes)
+        self.alturaClientes.place(x=225,y=50)
                 
-        self.textoPiso = StringVar()
-        self.piso = Entry(self.marcoSuperior, width=5, textvariable=self.textoPiso)
-        self.piso.place(x=325,y=50)
+        self.textoPisoClientes = StringVar()
+        self.pisoClientes = Entry(self.marcoSuperiorClientes, width=5, textvariable=self.textoPisoClientes)
+        self.pisoClientes.place(x=325,y=50)
                 
-        self.textoDepartamento = StringVar()
-        self.departamento = Entry(self.marcoSuperior, width=5, textvariable=self.textoDepartamento)
-        self.departamento.place(x=470,y=50)
+        self.textoDepartamentoClientes = StringVar()
+        self.departamentoClientes = Entry(self.marcoSuperiorClientes, width=5, textvariable=self.textoDepartamentoClientes)
+        self.departamentoClientes.place(x=470,y=50)
 
-        self.textoBarrio = StringVar()
-        self.barrio = Entry(self.marcoSuperior, width=15, textvariable=self.textoBarrio)
-        self.barrio.place(x=45,y=100)
+        self.textoBarrioClientes = StringVar()
+        self.barrioClientes = Entry(self.marcoSuperiorClientes, width=15, textvariable=self.textoBarrioClientes)
+        self.barrioClientes.place(x=45,y=100)
 
         
         self.clienteId=StringVar()
-        self.consulta = "SELECT * FROM clientes WHERE visible = 1"
+        self.sqlClientes = ("SELECT clientes.clientes_id,crea.usuario,modifica.usuario,clientes.telefono,clientes.nombre,clientes.calle,clientes.altura,"+
+                            "clientes.piso,clientes.departamento,clientes.barrio FROM clientes INNER JOIN usuarios AS crea on "+
+                            "clientes.id_usuario_crea=crea.usuarios_id INNER JOIN usuarios AS modifica ON clientes.id_usuario_modifica=modifica.usuarios_id"+
+                            " WHERE clientes.activo = 1 ORDER BY clientes.nombre ASC")
         
-        self.botonBuscar = Button(self.marcoSuperior, text="Modificar", width=10, height=1, command=lambda:[self.modificarCliente(cursor,
-                            self.ventanaClientes, cliente, self.clienteId.get(), self.telefono.get(), self.nombre.get(), self.calle.get(),
-                            self.altura.get(), self.piso.get(), self.departamento.get(), self.barrio.get()),
-                            self.vaciarTabla(self.listaClientes), self.completarTabla(cursor, self.listaClientes, self.consulta)])
-        self.botonBuscar.place(x=200,y=100)
+        self.botonModificarClientes = Button(self.marcoSuperiorClientes, text="Modificar", width=10, height=1, command=lambda:[self.modificarCliente(
+                            self.ventanaClientes, cliente, self.clienteId.get(), self.telefonoClientes.get(), self.nombreClientes.get(), self.calleClientes.get(),
+                            self.alturaClientes.get(), self.pisoClientes.get(), self.departamentoClientes.get(), self.barrioClientes.get(), usuario) ,
+                            self.vaciarTabla(self.listaClientes), self.completarTabla(cursor, self.listaClientes, self.sqlClientes)])
+        self.botonModificarClientes.place(x=200,y=100)
         
-        self.botonBuscar = Button(self.marcoSuperior, text="Eliminar", width=10, height=1, command=lambda:[self.borrarCliente(cliente,
+        self.botonEliminarClientes = Button(self.marcoSuperiorClientes, text="Eliminar", width=10, height=1, command=lambda:[self.borrarCliente(cliente,
                             self.ventanaClientes, self.clienteId.get()), self.vaciarTabla(self.listaClientes),
-                            self.self.completarTabla(cursor, self.listaClientes, self.consulta)])
-        self.botonBuscar.place(x=300,y=100)
+                            self.completarTabla(cursor, self.listaClientes, self.sqlClientes)])
+        self.botonEliminarClientes.place(x=300,y=100)
         
-        self.botonBuscar = Button(self.marcoSuperior, text="Guardar", width=10, height=1, command=lambda:[self.guardarCliente(cursor,
-                            self.ventanaClientes, cliente, self.telefono.get(), self.nombre.get(), self.calle.get(),
-                            self.altura.get(), self.piso.get(),self.departamento.get(), self.barrio.get()),
-                            self.vaciarTabla(self.listaClientes), self.completarTabla(cursor, self.listaClientes, self.consulta)])
-        self.botonBuscar.place(x=400,y=100)
+        self.botonGuardarClientes = Button(self.marcoSuperiorClientes, text="Guardar", width=10, height=1, command=lambda:[self.guardarCliente(cursor,
+                            self.ventanaClientes, cliente, self.telefonoClientes.get(), self.nombreClientes.get(), self.calleClientes.get(),
+                            self.alturaClientes.get(), self.pisoClientes.get(),self.departamentoClientes.get(), self.barrioClientes.get(), usuario),
+                            self.vaciarTabla(self.listaClientes), self.completarTabla(cursor, self.listaClientes, self.sqlClientes)])
+        self.botonGuardarClientes.place(x=400,y=100)
 
-        self.botonSalir = Button(self.marcoSuperior, text="Salir", width=10, height=1, command=lambda:self.ventanaClientes.destroy())
-        self.botonSalir.place(x=500,y=100)
+        self.botonSalirClientes = Button(self.marcoSuperiorClientes, text="Salir", width=10, height=1, command=lambda:self.ventanaClientes.destroy())
+        self.botonSalirClientes.place(x=500,y=100)
 
-        def click(event):
-            id= self.listaClientes.selection()[0]
-            if int(id)>0:
-                self.clienteId.set(value=(self.listaClientes.item(id, "values")[0]))
-                self.telefono.delete(0, "end")
-                self.tel=self.listaClientes.item(id, "values")[1]
-                self.telefono.insert(0, self.tel)
-                self.nombre.delete(0, "end")
-                self.nom=self.listaClientes.item(id, "values")[2]
-                self.nombre.insert(0, self.nom)
-                self.calle.delete(0, "end")
-                self.call=self.listaClientes.item(id, "values")[3]
-                self.calle.insert(0, self.call)
-                self.altura.delete(0, "end")
-                self.alt=self.listaClientes.item(id, "values")[4]
-                self.altura.insert(0, self.alt)
-                self.piso.delete(0, "end")
-                self.pis=self.listaClientes.item(id, "values")[5]
-                self.piso.insert(0, self.pis)
-                self.departamento.delete(0, "end")
-                self.dep=self.listaClientes.item(id, "values")[6]
-                self.departamento.insert(0, self.dep)
-                self.barrio.delete(0, "end")
-                self.bar=self.listaClientes.item(id, "values")[7]
-                self.barrio.insert(0, self.bar)
+        def clickClientes(event):
+            idClientes= self.listaClientes.selection()[0]
+            if int(idClientes)>0:
+                self.clienteId.set(value=(self.listaClientes.item(idClientes, "values")[0]))
+                self.telefonoClientes.delete(0, "end")
+                self.telClientes=self.listaClientes.item(idClientes, "values")[3]
+                self.telefonoClientes.insert(0, self.telClientes)
+                self.nombreClientes.delete(0, "end")
+                self.nomClientes=self.listaClientes.item(idClientes, "values")[4]
+                self.nombreClientes.insert(0, self.nomClientes)
+                self.calleClientes.delete(0, "end")
+                self.callClientes=self.listaClientes.item(idClientes, "values")[5]
+                self.calleClientes.insert(0, self.callClientes)
+                self.alturaClientes.delete(0, "end")
+                self.altClientes=self.listaClientes.item(idClientes, "values")[6]
+                self.alturaClientes.insert(0, self.altClientes)
+                self.pisoClientes.delete(0, "end")
+                self.pisClientes=self.listaClientes.item(idClientes, "values")[7]
+                self.pisoClientes.insert(0, self.pisClientes)
+                self.departamentoClientes.delete(0, "end")
+                self.depClientes=self.listaClientes.item(idClientes, "values")[8]
+                self.departamentoClientes.insert(0, self.depClientes)
+                self.barrioClientes.delete(0, "end")
+                self.barClientes=self.listaClientes.item(idClientes, "values")[9]
+                self.barrioClientes.insert(0, self.barClientes)
                 
 
         self.listaClientes=ttk.Treeview(self.marcoClientes, columns=
-                        ("clientes_id","telefono","nombre","calle","altura","piso","departamento","barrio"),
-                        displaycolumns=("nombre","telefono","calle","altura","piso","departamento","barrio"))
+                        ("clientes_id","crea","modifica","telefono","nombre","calle","altura",
+                        "piso","departamento","barrio"),
+                        displaycolumns=("nombre","telefono","calle","altura","piso","departamento","barrio",
+                        "crea","modifica"))
         self.listaClientes.column("#0",width=0, stretch=NO) 
         self.listaClientes.column("telefono",width=100, anchor=CENTER) 
         self.listaClientes.column("nombre",width=150) 
@@ -803,9 +1179,11 @@ class PizzaYa():
         self.listaClientes.column("piso",width=50, anchor=CENTER) 
         self.listaClientes.column("departamento",width=50, anchor=CENTER)
         self.listaClientes.column("barrio",width=150, anchor=CENTER) 
+        self.listaClientes.column("crea",width=100, anchor=CENTER) 
+        self.listaClientes.column("modifica",width=100, anchor=CENTER) 
         self.listaClientes.pack()                                 
         self.listaClientes.place(width=600, height=270, x=10)
-        self.listaClientes.bind("<<TreeviewSelect>>", click)
+        self.listaClientes.bind("<<TreeviewSelect>>", clickClientes)
         
         self.listaClientes.heading("#0",text="")
         self.listaClientes.heading("telefono",text="Telefono")
@@ -815,6 +1193,8 @@ class PizzaYa():
         self.listaClientes.heading("piso",text="Piso")
         self.listaClientes.heading("departamento",text="Departamento")
         self.listaClientes.heading("barrio",text="Barrio")
+        self.listaClientes.heading("crea",text="Creado Por")
+        self.listaClientes.heading("modifica",text="Modificado Por")
 
         self.scrollVertical=Scrollbar(self.marcoClientes, command=self.listaClientes.yview)   #scroll para el cuadro de texto yview posiciona el escrol verticalmente
         self.scrollVertical.place(width=15, height=270, x=615)                      #el scroll toma la dimencion del cuadro de texto
@@ -824,12 +1204,206 @@ class PizzaYa():
         scrollHotizontal.place(width=600, height=15, x=10, y=280)
         self.listaClientes.config(xscrollcommand=scrollHotizontal.set)
 
-        self.completarTablaClientes(cursor,self.listaClientes)
+        self.completarTabla(cursor,self.listaClientes,self.sqlClientes)
+
+
+    '''#   ********************                Ventana Usuarios                                  ********************'''
+
+    def usuarios(self, cursor, vent, usuario):
+        self.anchoVentana = 640
+        self.altoVentana = 480
+
+        self.ventanaUsuarios = Tk()
+        self.xventana = int(vent.winfo_screenwidth()/2 - self.anchoVentana/2)
+        self.yventana = int(vent.winfo_screenheight()/2 - self.altoVentana/1.7)
+        self.ventanaUsuarios.geometry(str(self.anchoVentana) + "x" + str(self.altoVentana)
+        + "+" + str(self.xventana) + "+" + str(self.yventana))                       
+        self.ventanaUsuarios.resizable(0,0)                                     
+        self.ventanaUsuarios.title("Usuarios")                                  
+        self.ventanaUsuarios.iconbitmap(self.icono)                            
+
+
+        self.marcoSuperiorUsuarios=LabelFrame(self.ventanaUsuarios)
+        self.marcoSuperiorUsuarios.place(x=10, y=10, width=620, height=190)
+        self.marcoUsuarios=Frame(self.ventanaUsuarios)
+        self.marcoUsuarios.place(y=220, width=640, height=250)
+            
+        
+        self.eticUsuario = Label(self.marcoSuperiorUsuarios, text="Usuario: ")
+        self.eticUsuario.place(x=0,y=1)
+
+        self.eticContrasenia = Label(self.marcoSuperiorUsuarios, text="Contraseña: ")
+        self.eticContrasenia.place(x=250,y=1)
+
+        self.eticNombre = Label(self.marcoSuperiorUsuarios, text="Nombre: ")
+        self.eticNombre.place(x=0,y=50)
+
+        self.eticTelefono = Label(self.marcoSuperiorUsuarios, text="Telefono: ")
+        self.eticTelefono.place(x=200,y=50)
+        
+        self.eticTelefono = Label(self.marcoSuperiorUsuarios, text="Mail: ")
+        self.eticTelefono.place(x=435,y=50)
+
+        self.eticCalle = Label(self.marcoSuperiorUsuarios, text="Calle: ")
+        self.eticCalle.place(x=0,y=100)
+
+        self.eticAltura = Label(self.marcoSuperiorUsuarios, text="Altura: ")
+        self.eticAltura.place(x=180,y=100)
+
+        self.eticPiso = Label(self.marcoSuperiorUsuarios, text="Piso: ")
+        self.eticPiso.place(x=290,y=100)
+
+        self.eticDepartamento = Label(self.marcoSuperiorUsuarios, text="Departamento: ")
+        self.eticDepartamento.place(x=380,y=100)
+
+        self.eticBarrio = Label(self.marcoSuperiorUsuarios, text="Barrio: ")
+        self.eticBarrio.place(x=0,y=150)
+        
+        self.textoUsuario = StringVar()
+        self.usuarioUsuario = Entry(self.marcoSuperiorUsuarios, width=20, textvariable=self.textoUsuario)
+        self.usuarioUsuario.place(x=55,y=1)
+            
+        self.textoContrasenia = StringVar()
+        self.contraseniaUsuario = Entry(self.marcoSuperiorUsuarios, width=15, textvariable=self.textoContrasenia, show="*")
+        self.contraseniaUsuario.place(x=325,y=1)
+        
+        self.textoNombre = StringVar()
+        self.nombreUsuario = Entry(self.marcoSuperiorUsuarios, width=20, textvariable=self.textoNombre)
+        self.nombreUsuario.place(x=55,y=50)
+            
+        self.textoTelefono = StringVar()
+        self.telefonoUsuario = Entry(self.marcoSuperiorUsuarios, width=15, textvariable=self.textoTelefono)
+        self.telefonoUsuario.place(x=260,y=50)
+                    
+        self.textoMail = StringVar()
+        self.mailUsuario = Entry(self.marcoSuperiorUsuarios, width=15, textvariable=self.textoMail)
+        self.mailUsuario.place(x=470,y=50)
+                    
+        self.textoCalle = StringVar()
+        self.calleUsuario = Entry(self.marcoSuperiorUsuarios, width=15, textvariable=self.textoCalle)
+        self.calleUsuario.place(x=40,y=100)
+        
+        self.textoAltura = StringVar()
+        self.alturaUsuario = Entry(self.marcoSuperiorUsuarios, width=6, textvariable=self.textoAltura)
+        self.alturaUsuario.place(x=225,y=100)
+                
+        self.textoPiso = StringVar()
+        self.pisoUsuario = Entry(self.marcoSuperiorUsuarios, width=5, textvariable=self.textoPiso)
+        self.pisoUsuario.place(x=325,y=100)
+                
+        self.textoDepartamento = StringVar()
+        self.departamentoUsuario = Entry(self.marcoSuperiorUsuarios, width=5, textvariable=self.textoDepartamento)
+        self.departamentoUsuario.place(x=470,y=100)
+
+        self.textoBarrio = StringVar()
+        self.barrioUsuario = Entry(self.marcoSuperiorUsuarios, width=15, textvariable=self.textoBarrio)
+        self.barrioUsuario.place(x=45,y=150)
+
+        
+        self.usuarioId=StringVar()
+        self.sqlUsuarios = "SELECT * FROM usuarios WHERE activo = 1"
+        
+        self.botonModificar = Button(self.marcoSuperiorUsuarios, text="Modificar", width=10, height=1, command=lambda:[self.modificarUsuario(cursor,
+                            self.ventanaUsuarios, usuario, self.usuarioId.get(), self.usuarioUsuario.get(), self.contraseniaUsuario.get(), self.nombreUsuario.get(),
+                            self.telefonoUsuario.get(), self.mailUsuario.get(), self.calleUsuario.get(), self.alturaUsuario.get(), self.pisoUsuario.get(),
+                            self.departamentoUsuario.get(), self.barrioUsuario.get()), self.vaciarTabla(self.listaUsuarios),
+                            self.completarTabla(cursor, self.listaUsuarios, self.sqlUsuarios)])
+        self.botonModificar.place(x=200,y=150)
+        
+        self.botonEliminar = Button(self.marcoSuperiorUsuarios, text="Eliminar", width=10, height=1, command=lambda:[self.borrarUsuario(usuario,
+                            self.ventanaUsuarios, self.usuarioId.get()), self.vaciarTabla(self.listaUsuarios),
+                            self.completarTabla(cursor, self.listaUsuarios, self.sqlUsuarios)])
+        self.botonEliminar.place(x=300,y=150)
+        
+        self.botonGuardar = Button(self.marcoSuperiorUsuarios, text="Guardar", width=10, height=1, command=lambda:[self.guardarUsuario(cursor,
+                            self.ventanaUsuarios, usuario, self.usuarioUsuario.get(), self.contraseniaUsuario.get(), self.nombreUsuario.get(),
+                            self.telefonoUsuario.get(), self.mailUsuario.get(), self.calleUsuario.get(), self.alturaUsuario.get(), self.pisoUsuario.get(),
+                            self.departamentoUsuario.get(), self.barrioUsuario.get()),self.vaciarTabla(self.listaUsuarios),
+                            self.completarTabla(cursor, self.listaUsuarios, self.sqlUsuarios)])
+        self.botonGuardar.place(x=400,y=150)
+
+        self.botonSalir = Button(self.marcoSuperiorUsuarios, text="Salir", width=10, height=1, command=lambda:self.ventanaUsuarios.destroy())
+        self.botonSalir.place(x=500,y=150)
+
+        def click(event):
+            id= self.listaUsuarios.selection()[0]
+            if int(id)>0:
+                self.usuarioId.set(value=(self.listaUsuarios.item(id, "values")[0]))
+                self.usuarioUsuario.delete(0, "end")
+                self.usuUsuario=self.listaUsuarios.item(id, "values")[1]
+                self.usuarioUsuario.insert(0, self.usuUsuario)
+                self.contraseniaUsuario.delete(0, "end")
+                self.conUsuario=self.listaUsuarios.item(id, "values")[2]
+                self.contraseniaUsuario.insert(0, self.conUsuario)
+                self.nombreUsuario.delete(0, "end")
+                self.nomUsuario=self.listaUsuarios.item(id, "values")[3]
+                self.nombreUsuario.insert(0, self.nomUsuario)
+                self.telefonoUsuario.delete(0, "end")
+                self.telUsuario=self.listaUsuarios.item(id, "values")[4]
+                self.telefonoUsuario.insert(0, self.telUsuario)
+                self.mailUsuario.delete(0, "end")
+                self.maiUsuario=self.listaUsuarios.item(id, "values")[5]
+                self.mailUsuario.insert(0, self.maiUsuario)
+                self.calleUsuario.delete(0, "end")
+                self.callUsuario=self.listaUsuarios.item(id, "values")[6]
+                self.calleUsuario.insert(0, self.callUsuario)
+                self.alturaUsuario.delete(0, "end")
+                self.altUsuario=self.listaUsuarios.item(id, "values")[7]
+                self.alturaUsuario.insert(0, self.altUsuario)
+                self.pisoUsuario.delete(0, "end")
+                self.pisUsuario=self.listaUsuarios.item(id, "values")[8]
+                self.pisoUsuario.insert(0, self.pisUsuario)
+                self.departamentoUsuario.delete(0, "end")
+                self.depUsuario=self.listaUsuarios.item(id, "values")[9]
+                self.departamentoUsuario.insert(0, self.depUsuario)
+                self.barrioUsuario.delete(0, "end")
+                self.barUsuario=self.listaUsuarios.item(id, "values")[10]
+                self.barrioUsuario.insert(0, self.barUsuario)
+                
+
+        self.listaUsuarios=ttk.Treeview(self.marcoUsuarios, columns=
+                        ("clientes_id","usuario","contrasenia","nombre","telefono","mail","calle","altura","piso",
+                        "departamento","barrio"),displaycolumns=("usuario","nombre","telefono","mail","calle",
+                        "altura","piso","departamento","barrio"))
+        self.listaUsuarios.column("#0",width=0, stretch=NO) 
+        self.listaUsuarios.column("usuario",width=100) 
+        self.listaUsuarios.column("nombre",width=150, anchor=CENTER) 
+        self.listaUsuarios.column("telefono",width=100, anchor=CENTER) 
+        self.listaUsuarios.column("mail",width=100, anchor=CENTER) 
+        self.listaUsuarios.column("calle",width=150, anchor=CENTER) 
+        self.listaUsuarios.column("altura",width=50, anchor=CENTER) 
+        self.listaUsuarios.column("piso",width=50, anchor=CENTER)
+        self.listaUsuarios.column("departamento",width=50, anchor=CENTER)
+        self.listaUsuarios.column("barrio",width=150, anchor=CENTER) 
+        self.listaUsuarios.pack()                                 
+        self.listaUsuarios.place(width=600, height=220, x=10)
+        self.listaUsuarios.bind("<<TreeviewSelect>>", click)
+        
+        self.listaUsuarios.heading("#0",text="")
+        self.listaUsuarios.heading("usuario",text="Usuario")
+        self.listaUsuarios.heading("nombre",text="Nombre")
+        self.listaUsuarios.heading("telefono",text="Telefono")
+        self.listaUsuarios.heading("mail",text="Mail")
+        self.listaUsuarios.heading("calle",text="Calle")
+        self.listaUsuarios.heading("altura",text="Altura")
+        self.listaUsuarios.heading("piso",text="Piso")
+        self.listaUsuarios.heading("departamento",text="Departamento")
+        self.listaUsuarios.heading("barrio",text="Barrio")
+
+        self.scrollVertical=Scrollbar(self.marcoUsuarios, command=self.listaUsuarios.yview)   #scroll para el cuadro de texto yview posiciona el escrol verticalmente
+        self.scrollVertical.place(width=15, height=220, x=615)                      #el scroll toma la dimencion del cuadro de texto
+        self.listaUsuarios.config(yscrollcommand=self.scrollVertical.set)
+        
+        scrollHotizontal=Scrollbar(self.marcoUsuarios, command=self.listaUsuarios.xview, orient=HORIZONTAL)
+        scrollHotizontal.place(width=600, height=15, x=10, y=230)
+        self.listaUsuarios.config(xscrollcommand=scrollHotizontal.set)
+
+        self.completarTabla(cursor,self.listaUsuarios,self.sqlUsuarios)
 
 
     '''#   ********************                Ventana Menu                                  ********************'''
 
-    def menu(self, cursor, vent, menu):
+    def menu(self, cursor, vent, menu, usuario):
         self.anchoVentana = 640
         self.altoVentana = 480
 
@@ -843,72 +1417,94 @@ class PizzaYa():
         self.ventanaMenu.iconbitmap(self.icono)                            
 
 
-        self.marcoSuperior=LabelFrame(self.ventanaMenu)
-        self.marcoSuperior.place(x=10, y=10, width=620, height=140)
+        self.marcoSuperiorMenu=LabelFrame(self.ventanaMenu)
+        self.marcoSuperiorMenu.place(x=10, y=10, width=620, height=140)
         self.marcoMenu=Frame(self.ventanaMenu)
         self.marcoMenu.place(y=170, width=640, height=300)
             
         
-        self.eticDescripcion = Label(self.marcoSuperior, text="Descripcion: ")
-        self.eticDescripcion.place(x=10,y=0)
+        self.eticDescripcionMenu = Label(self.marcoSuperiorMenu, text="Descripcion: ")
+        self.eticDescripcionMenu.place(x=10,y=10)
 
-        self.eticPrecioVenta = Label(self.marcoSuperior, text="Precio de Venta: ")
-        self.eticPrecioVenta.place(x=10,y=50)
+        self.eticPrecioVentaMenu = Label(self.marcoSuperiorMenu, text="Precio de Venta: ")
+        self.eticPrecioVentaMenu.place(x=10,y=50)
 
-        self.textoDescripcion = StringVar()
-        self.descripcion = Entry(self.marcoSuperior, width=50, textvariable=self.textoDescripcion)
-        self.descripcion.place(x=85,y=0)
+        self.eticCategoriaMenu = Label(self.marcoSuperiorMenu, text="Categoria: ")
+        self.eticCategoriaMenu.place(x=200,y=50)
+
+        self.textoDescripcionMenu = StringVar()
+        self.descripcionMenu = Entry(self.marcoSuperiorMenu, width=50, textvariable=self.textoDescripcionMenu)
+        self.descripcionMenu.place(x=85,y=10)
             
-        self.textoPrecioVenta = StringVar()
-        self.precioVenta = Entry(self.marcoSuperior, width=10, textvariable=self.textoPrecioVenta)
-        self.precioVenta.place(x=105,y=50)
+        self.textoPrecioVentaMenu = StringVar()
+        self.precioVentaMenu = Entry(self.marcoSuperiorMenu, width=10, textvariable=self.textoPrecioVentaMenu)
+        self.precioVentaMenu.place(x=105,y=50)
+            
+        self.listaCategoriaMenu = self.completarListaCategoria(cursor)
+        self.categoriaMenu = Combobox(self.marcoSuperiorMenu, width=10, state="readonly", values=self.listaCategoriaMenu)
+        self.categoriaMenu.place(x=265,y=50)
 
         
         self.menuId=StringVar()
-        self.consulta= "SELECT * FROM menu WHERE visible = 1"
+        self.sqlMenu= ("SELECT menu.menu_id,menu.descripcion,menu.precio_venta, crea.usuario AS crea, modifica.usuario AS modifica, "+
+                        "categorias_menu.descripcion AS categoria,categorias_menu.categorias_menu_id FROM menu "+
+                        "INNER JOIN categorias_menu ON menu.id_categorias_menu=categorias_menu.categorias_menu_id "+
+                        "INNER JOIN usuarios AS crea ON menu.id_usuario_crea=crea.usuarios_id "+
+                        "INNER JOIN usuarios AS modifica ON menu.id_usuario_modifica=modifica.usuarios_id WHERE menu.activo = 1 "+
+                        "ORDER BY menu.descripcion ASC")
 
-        self.botonBuscar = Button(self.marcoSuperior, text="Modificar", width=10, height=1, command=lambda:[self.modificarMenu(
-                            self.ventanaMenu, menu, self.menuId.get(), self.descripcion.get(), self.precioVenta.get()),
-                            self.vaciarTabla(self.listaMenu), self.completarTabla(cursor, self.listaMenu, self.consulta)])
+        self.botonBuscar = Button(self.marcoSuperiorMenu, text="Modificar", width=10, height=1, command=lambda:[self.modificarMenu(
+                            self.ventanaMenu, menu, self.menuId.get(), self.descripcionMenu.get(), self.precioVentaMenu.get(),
+                            (int(self.categoriaMenu.current())+1), usuario),
+                            self.vaciarTabla(self.listaMenu), self.completarTabla(cursor, self.listaMenu, self.sqlMenu)])
         self.botonBuscar.place(x=200,y=100)
         
-        self.botonBuscar = Button(self.marcoSuperior, text="Eliminar", width=10, height=1, command=lambda:[self.borrarMenu(menu,
-                            self.ventanaMenu, self.menuId.get()), self.vaciarTabla(self.listaMenu), self.completarTabla(cursor, self.listaMenu, self.consulta)])
+        self.botonBuscar = Button(self.marcoSuperiorMenu, text="Eliminar", width=10, height=1, command=lambda:[self.borrarMenu(menu,
+                            self.ventanaMenu, self.menuId.get()), self.vaciarTabla(self.listaMenu), self.completarTabla(cursor,
+                            self.listaMenu, self.sqlMenu)])
         self.botonBuscar.place(x=300,y=100)
         
-        self.botonBuscar = Button(self.marcoSuperior, text="Guardar", width=10, height=1, command=lambda:[self.guardarMenu(cursor,
-                            self.ventanaMenu, menu, self.descripcion.get(), self.precioVenta.get()),
-                            self.vaciarTabla(self.listaMenu), self.completarTabla(cursor, self.listaMenu, self.consulta)])
+        self.botonBuscar = Button(self.marcoSuperiorMenu, text="Guardar", width=10, height=1, command=lambda:[self.guardarMenu(cursor,
+                            self.ventanaMenu, menu, self.descripcionMenu.get(), self.precioVentaMenu.get(), (int(self.categoriaMenu.current())+1),usuario),
+                            self.vaciarTabla(self.listaMenu), self.completarTabla(cursor, self.listaMenu, self.sqlMenu)])
         self.botonBuscar.place(x=400,y=100)
 
-        self.botonSalir = Button(self.marcoSuperior, text="Salir", width=10, height=1, command=lambda:self.ventanaMenu.destroy())
+        self.botonSalir = Button(self.marcoSuperiorMenu, text="Salir", width=10, height=1, command=lambda:self.ventanaMenu.destroy())
         self.botonSalir.place(x=500,y=100)
 
 
-        def click(event):
-            id= self.listaMenu.selection()[0]
-            if int(id)>0:
-                self.menuId.set(value=(self.listaMenu.item(id, "values")[0]))
-                self.descripcion.delete(0, "end")
-                self.des=self.listaMenu.item(id, "values")[1]
-                self.descripcion.insert(0, self.des)
-                self.precioVenta.delete(0, "end")
-                self.pv=self.listaMenu.item(id, "values")[2]
-                self.precioVenta.insert(0, self.pv)
-                
+        def clickMenu(event):
+            idMenu= self.listaMenu.selection()[0]
+            if int(idMenu)>0:
+                self.menuId.set(value=(self.listaMenu.item(idMenu, "values")[0]))
+                self.descripcionMenu.delete(0, "end")
+                self.desMenu=self.listaMenu.item(idMenu, "values")[1]
+                self.descripcionMenu.insert(0, self.desMenu)
+                self.precioVentaMenu.delete(0, "end")
+                self.pvMenu=self.listaMenu.item(idMenu, "values")[2]
+                self.precioVentaMenu.insert(0, self.pvMenu)
+                self.categoriaMenu.current(int(self.listaMenu.item(idMenu, "values")[6])-1)
+                                
 
-        self.listaMenu=ttk.Treeview(self.marcoMenu, columns=("menu_id","descripcion","precio_venta"),
-                                    displaycolumns=("descripcion","precio_venta"))
+        self.listaMenu=ttk.Treeview(self.marcoMenu, columns=("menu_id","descripcion","precio_venta","crea","modifica",
+                                    "categoria","categorias_menu.categorias_menu_id"),
+                                    displaycolumns=("descripcion","precio_venta","categoria","crea","modifica"))
         self.listaMenu.column("#0",width=0, stretch=NO) 
         self.listaMenu.column("descripcion",width=300)
-        self.listaMenu.column("precio_venta",width=50, anchor=CENTER)
+        self.listaMenu.column("precio_venta",width=100, anchor=CENTER)
+        self.listaMenu.column("categoria",width=100, anchor=CENTER)
+        self.listaMenu.column("crea",width=100, anchor=CENTER)
+        self.listaMenu.column("modifica",width=100, anchor=CENTER)
         self.listaMenu.pack()                                 
         self.listaMenu.place(width=600, height=270, x=10)
-        self.listaMenu.bind("<<TreeviewSelect>>", click)
+        self.listaMenu.bind("<<TreeviewSelect>>", clickMenu)
         
         self.listaMenu.heading("#0",text="")
         self.listaMenu.heading("descripcion",text="Descripcion")
         self.listaMenu.heading("precio_venta",text="Precio de Venta")
+        self.listaMenu.heading("categoria",text="Categoria")
+        self.listaMenu.heading("crea",text="Creado Por")
+        self.listaMenu.heading("modifica",text="Modificado Por")
 
         self.scrollVertical=Scrollbar(self.marcoMenu, command=self.listaMenu.yview)
         self.scrollVertical.place(width=15, height=270, x=615)     
@@ -918,7 +1514,98 @@ class PizzaYa():
         scrollHotizontal.place(width=600, height=15, x=10, y=280)     
         self.listaMenu.config(xscrollcommand=scrollHotizontal.set)
 
-        self.completarTabla(cursor,self.listaMenu,self.consulta)
+        self.completarTabla(cursor,self.listaMenu,self.sqlMenu)
+
+            
+    '''#   ********************            Ventana Categorias Menu                            ********************'''
+
+    def categoriasMenu(self, cursor, vent, categorias, usuario):
+        self.anchoVentana = 640
+        self.altoVentana = 480
+
+        self.ventanaCategoriasMenu = Tk() 
+        self.xventana = int(vent.winfo_screenwidth()/2 - self.anchoVentana/2)
+        self.yventana = int(vent.winfo_screenheight()/2 - self.altoVentana/1.7)
+        self.ventanaCategoriasMenu.geometry(str(self.anchoVentana) + "x" + str(self.altoVentana)
+        + "+" + str(self.xventana) + "+" + str(self.yventana))                   
+        self.ventanaCategoriasMenu.resizable(0,0)                                     
+        self.ventanaCategoriasMenu.title("Categorias")                                      
+        self.ventanaCategoriasMenu.iconbitmap(self.icono)                            
+
+
+        self.marcoSuperiorCategoriasMenu=LabelFrame(self.ventanaCategoriasMenu)
+        self.marcoSuperiorCategoriasMenu.place(x=10, y=10, width=620, height=140)
+        self.marcoCategoriasMenu=Frame(self.ventanaCategoriasMenu)
+        self.marcoCategoriasMenu.place(y=170, width=640, height=300)
+            
+        
+        self.eticDescripcion = Label(self.marcoSuperiorCategoriasMenu, text="Descripcion: ")
+        self.eticDescripcion.place(x=100,y=50)
+
+        self.textoDescripcion = StringVar()
+        self.descripcion = Entry(self.marcoSuperiorCategoriasMenu, width=50, textvariable=self.textoDescripcion)
+        self.descripcion.place(x=185,y=50)
+
+        
+        self.categoriasMenuId=StringVar()
+        self.sqlCategoriasMenu= ("SELECT categorias_menu.categorias_menu_id,categorias_menu.descripcion, crea.usuario AS crea, "+
+                        "modifica.usuario AS modifica FROM categorias_menu "+
+                        "INNER JOIN usuarios AS crea ON categorias_menu.id_usuario_crea=crea.usuarios_id "+
+                        "INNER JOIN usuarios AS modifica ON categorias_menu.id_usuario_modifica=modifica.usuarios_id "+
+                        "WHERE categorias_menu.activo = 1 ORDER BY categorias_menu.descripcion ASC;")
+
+        self.botonBuscarCategoriasMenu = Button(self.marcoSuperiorCategoriasMenu, text="Modificar", width=10, height=1, command=lambda:[self.modificarCategoriasMenu(
+                            self.ventanaCategoriasMenu, categorias, self.categoriasMenuId.get(), self.descripcion.get(), usuario),
+                            self.vaciarTabla(self.listaCategoriasMenu), self.completarTabla(cursor, self.listaCategoriasMenu, self.sqlCategoriasMenu)])
+        self.botonBuscarCategoriasMenu.place(x=200,y=100)
+        
+        self.botonBuscarCategoriasMenu = Button(self.marcoSuperiorCategoriasMenu, text="Eliminar", width=10, height=1, command=lambda:[self.borrarCategoriasMenu(categorias,
+                            self.ventanaCategoriasMenu, self.categoriasMenuId.get()), self.vaciarTabla(self.listaCategoriasMenu), self.completarTabla(cursor,
+                            self.listaCategoriasMenu, self.sqlCategoriasMenu)])
+        self.botonBuscarCategoriasMenu.place(x=300,y=100)
+        
+        self.botonBuscarCategoriasMenu = Button(self.marcoSuperiorCategoriasMenu, text="Guardar", width=10, height=1, command=lambda:[self.guardarCategoriasMenu(cursor,
+                            self.ventanaCategoriasMenu, categorias, self.descripcion.get(), usuario),
+                            self.vaciarTabla(self.listaCategoriasMenu), self.completarTabla(cursor, self.listaCategoriasMenu, self.sqlCategoriasMenu)])
+        self.botonBuscarCategoriasMenu.place(x=400,y=100)
+
+        self.botonSalirCategoriasMenu = Button(self.marcoSuperiorCategoriasMenu, text="Salir", width=10, height=1, command=lambda:self.ventanaCategoriasMenu.destroy())
+        self.botonSalirCategoriasMenu.place(x=500,y=100)
+
+
+        def clickCategoriasMenu(event):
+            idCategoriasMenu= self.listaCategoriasMenu.selection()[0]
+            if int(idCategoriasMenu)>0:
+                self.categoriasMenuId.set(value=(self.listaCategoriasMenu.item(idCategoriasMenu, "values")[0]))
+                self.descripcion.delete(0, "end")
+                self.des=self.listaCategoriasMenu.item(idCategoriasMenu, "values")[1]
+                self.descripcion.insert(0, self.des)
+                
+
+        self.listaCategoriasMenu=ttk.Treeview(self.marcoCategoriasMenu, columns=("categorias_menu_id","descripcion","crea","modifica"),
+                                    displaycolumns=("descripcion","crea","modifica"))
+        self.listaCategoriasMenu.column("#0",width=0, stretch=NO) 
+        self.listaCategoriasMenu.column("descripcion",width=300)
+        self.listaCategoriasMenu.column("crea",width=100, anchor=CENTER)
+        self.listaCategoriasMenu.column("modifica",width=100, anchor=CENTER)
+        self.listaCategoriasMenu.pack()                                 
+        self.listaCategoriasMenu.place(width=600, height=270, x=10)
+        self.listaCategoriasMenu.bind("<<TreeviewSelect>>", clickCategoriasMenu)
+        
+        self.listaCategoriasMenu.heading("#0",text="")
+        self.listaCategoriasMenu.heading("descripcion",text="Descripcion")
+        self.listaCategoriasMenu.heading("crea",text="Creado Por")
+        self.listaCategoriasMenu.heading("modifica",text="Modificado Por")
+
+        self.scrollVertical=Scrollbar(self.marcoCategoriasMenu, command=self.listaCategoriasMenu.yview)
+        self.scrollVertical.place(width=15, height=270, x=615)     
+        self.listaCategoriasMenu.config(yscrollcommand=self.scrollVertical.set)
+        
+        scrollHotizontal=Scrollbar(self.marcoCategoriasMenu, command=self.listaCategoriasMenu.xview, orient=HORIZONTAL)   
+        scrollHotizontal.place(width=600, height=15, x=10, y=280)     
+        self.listaCategoriasMenu.config(xscrollcommand=scrollHotizontal.set)
+
+        self.completarTabla(cursor,self.listaCategoriasMenu,self.sqlCategoriasMenu)
 
             
 
@@ -932,50 +1619,149 @@ class PizzaYa():
             tabla.delete(i)
 
     def completarTablaPedidos(self, cursor, tabla):
-                cursor.execute("SELECT * FROM clientes INNER JOIN pedidos ON clientes.clientes_id=pedidos.id_cliente"+
-                                " WHERE fecha BETWEEN '" + datetime.today().strftime('%Y-%m-%d')
-                                    +" 00:00:00' AND '" + datetime.today().strftime('%Y-%m-%d')+" 23:59:59' AND (estado ='Preparacion' OR estado ='En Camino')")
-                self.consulta = cursor.fetchall()
+                cursor.execute("SELECT pedidos.pedidos_id, clientes.calle, clientes.altura, clientes.piso, clientes.departamento, clientes.barrio,"+
+                " pedidos.estado, pedidos.pago, pedidos.total, clientes.nombre, clientes.telefono, pedidos.fecha, crea.usuario AS crea, "+
+                "modifica.usuario AS modifica FROM clientes INNER JOIN pedidos ON clientes.clientes_id=pedidos.id_cliente"+
+                " INNER JOIN usuarios AS crea ON pedidos.id_usuario_crea=crea.usuarios_id INNER JOIN usuarios AS modifica"+
+                " ON pedidos.id_usuario_modifica=modifica.usuarios_id WHERE fecha BETWEEN '" + datetime.today().strftime('%Y-%m-%d')
+                +" 00:00:00' AND '" + datetime.today().strftime('%Y-%m-%d')+
+                " 23:59:59' AND (estado ='Preparacion' OR estado ='En Camino') ORDER BY `pedidos`.`fecha` ASC")
+                self.consultaCTP = cursor.fetchall()
                 
-                for i in self.consulta:
-                    id = i[9]
-                    tabla.insert("", END, id, values= i)
+                for i in self.consultaCTP:
+                    tabla.insert("", END, i[0], values= i)
 
     def completarTablaDetallePedidos(self, cursor, tabla, pedidoID):
-        cursor.execute("SELECT * FROM detalle_pedidos INNER JOIN menu ON detalle_pedidos.id_menu=menu.menu_id WHERE id_pedido = "+
+        cursor.execute("SELECT cantidad,descripcion,precio_venta FROM detalle_pedidos INNER JOIN menu ON detalle_pedidos.id_menu=menu.menu_id WHERE id_pedido = "+
                             str(pedidoID))
-        self.consulta = cursor.fetchall()
+        self.consultaCTDP = cursor.fetchall()
 
-        for i in self.consulta:
-            id = i[0]
-            tabla.insert("", END, id, values= i)
+        for i in self.consultaCTDP:
+            tabla.insert("", END, i[0], values= i)
          
     def completarTabla(self, cursor, tabla, consultaSql):
-        cursor.execute(consultaSql)                                 # Consulta SQL
-        self.consulta = cursor.fetchall() 
+        cursor.execute(consultaSql)
+        self.consultaCT = cursor.fetchall() 
                 
-        for i in self.consulta:
-            id = i[0]
-            tabla.insert("", END, id, values= i)
+        for i in self.consultaCT:
+            tabla.insert("", END, i[0], values= i)
 
-    def completarTablareportes(self, reporte, tabla, desdeAnio, desdeMes, desdeDia, hastaAnio, hastaMes, hastaDia):
-        self.consulta = reporte.parcial(desdeAnio, desdeMes, desdeDia, hastaAnio, hastaMes, hastaDia)
-        for i in self.consulta:
-            id = i[0]
-            tabla.insert("", END, id, values= i)
-    
-    def completarTablaProductosMenu(self, cursor, tabla, nombreTabla, listaPedido, textoTotal):
+    def completarTablareportes(self, reporte, tabla, desdeAnio, desdeMes, desdeDia, hastaAnio, hastaMes, hastaDia, total, entregado, cancelado):
+        self.consultaCTR = reporte.parcial(desdeAnio, desdeMes, desdeDia, hastaAnio, hastaMes, hastaDia)
+        self.tot=IntVar()
+        self.totEntregado=IntVar()
+        self.totCancelado=IntVar()
+       
+        for i in self.consultaCTR:
+            tabla.insert("", END, i[0], values= i)
+            if i[4] == "Entregado":
+                self.tot.set(self.tot.get()+i[3])
+                self.totEntregado.set(self.totEntregado.get()+1)
+            elif i[4] == "Cancelado":
+                self.totCancelado.set(self.totCancelado.get()+1)
+                
+        total.config(text="$ "+str(self.tot.get()))
+        entregado.config(text=self.totEntregado.get())
+        cancelado.config(text=self.totCancelado.get())
+        
+    def completarTablaProductosMenu(self, cursor, tabla, listaPedido, textoTotal):
         self.total=0
-        for i in listaPedido:
-            cursor.execute("SELECT * FROM "+nombreTabla+" WHERE menu_id= "+str(i[0]))   # Consulta SQL
-            self.consulta = cursor.fetchall()
-            
-            for j in self.consulta:
-                id = j[0]
-                tabla.insert("", END, id, values= (i[1],j[0],j[1],j[2]))
-                self.total +=(j[2]*i[1])
+     
+        cursor.execute("SELECT menu_id,descripcion,precio_venta FROM menu WHERE activo = 1 ORDER BY descripcion ASC")
+        self.consultaCTPM = cursor.fetchall()
+        
+        for j in self.consultaCTPM:
+            if listaPedido.get(j[0]):
+                tabla.insert("", END, j[0], values= (listaPedido.get(j[0]),j[0],j[1],j[2]))
+                self.total +=(j[2]*listaPedido.get(j[0]))
+       
         textoTotal.config(text=("$ "+str(self.total)))
+    
+    def completarTablaProductosMenuActualizado(self, cursor, tabla, listaPedido, opcion, aumentoPorc,
+                                                rebajaPorc, aumentoFij, rebajaFij, ventana):
+        cursor.execute("SELECT menu_id,descripcion,precio_venta FROM menu WHERE activo = 1 ORDER BY descripcion ASC")
+        self.consultaCTPMA = cursor.fetchall()
+                        
+        if opcion == 0:
+            for j in self.consultaCTPMA:
+                if listaPedido.count(j[0]):
+                    tabla.insert("", END, j[0], values= (j[0],j[1],j[2]))         
+        
+        if opcion == 1:
+            if aumentoPorc.isdigit() == False:
+                messagebox.showerror("Precios del Menu", "Valor Invalido. Ingrese un numero", parent=ventana)           # Si no se sellecciona producto no se genera
+            else:
+                for j in self.consultaCTPMA:
+                    if listaPedido.count(j[0]):
+                        tabla.insert("", END, j[0], values= (j[0],j[1],(j[2] * float(aumentoPorc))/100+j[2]))
+                       
+        if opcion == 2:
+            if rebajaPorc.isdigit() == False:
+                messagebox.showerror("Precios del Menu", "Valor Invalido. Ingrese un numero", parent=ventana)           # Si no se sellecciona producto no se genera
+            else:
+                for j in self.consultaCTPMA:
+                    if listaPedido.count(j[0]):
+                        tabla.insert("", END, j[0], values= (j[0],j[1],j[2]-(j[2] * float(rebajaPorc))/100))
+                   
+        if opcion == 3:
+            if aumentoFij.isdigit() == False:
+                messagebox.showerror("Precios del Menu", "Valor Invalido. Ingrese un numero", parent=ventana)           # Si no se sellecciona producto no se genera
+            else:
+               for j in self.consultaCTPMA:
+                    if listaPedido.count(j[0]):
+                        tabla.insert("", END, j[0], values= (j[0],j[1],(float(aumentoFij)+j[2])))
+                   
+        if opcion == 4:
+            if rebajaFij.isdigit() == False:
+                messagebox.showerror("Precios del Menu", "Valor Invalido. Ingrese un numero", parent=ventana)           # Si no se sellecciona producto no se genera
+            else:
+               for j in self.consultaCTPMA:
+                    if listaPedido.count(j[0]):
+                        tabla.insert("", END, j[0], values= (j[0],j[1],(j[2] - float(rebajaFij))))
+     
+    def completarTablaProductosCatMenuActualizado(self, cursor, tabla, opcion, categoria, aumentoPorc,
+                                                rebajaPorc, aumentoFij, rebajaFij, ventana):
+        if categoria == "":
+            return 0
 
+        cursor.execute("SELECT menu.menu_id,menu.descripcion,menu.precio_venta FROM menu "+
+                        "INNER JOIN categorias_menu ON menu.id_categorias_menu=categorias_menu.categorias_menu_id "+
+                        "WHERE menu.activo = 1 AND categorias_menu.activo = 1 AND categorias_menu.descripcion = '"+categoria+"' "+
+                        "ORDER BY menu.descripcion ASC")
+        self.consultaCTPCMA = cursor.fetchall()
+
+        if opcion == 0:
+            for j in self.consultaCTPCMA:
+                tabla.insert("", END, j[0], values= (j[0],j[1],j[2]))         
+        
+        if opcion == 1:
+            if aumentoPorc.isdigit() == False:
+                messagebox.showerror("Precios del Menu", "Valor Invalido. Ingrese un numero", parent=ventana)           # Si no se sellecciona producto no se genera
+            else:
+                for j in self.consultaCTPCMA:
+                    tabla.insert("", END, j[0], values= (j[0],j[1],(j[2] * float(aumentoPorc))/100+j[2]))
+                       
+        if opcion == 2:
+            if rebajaPorc.isdigit() == False:
+                messagebox.showerror("Precios del Menu", "Valor Invalido. Ingrese un numero", parent=ventana)           # Si no se sellecciona producto no se genera
+            else:
+                for j in self.consultaCTPCMA:
+                    tabla.insert("", END, j[0], values= (j[0],j[1],j[2]-(j[2] * float(rebajaPorc))/100))
+                   
+        if opcion == 3:
+            if aumentoFij.isdigit() == False:
+                messagebox.showerror("Precios del Menu", "Valor Invalido. Ingrese un numero", parent=ventana)           # Si no se sellecciona producto no se genera
+            else:
+               for j in self.consultaCTPCMA:
+                    tabla.insert("", END, j[0], values= (j[0],j[1],(float(aumentoFij)+j[2])))
+                   
+        if opcion == 4:
+            if rebajaFij.isdigit() == False:
+                messagebox.showerror("Precios del Menu", "Valor Invalido. Ingrese un numero", parent=ventana)           # Si no se sellecciona producto no se genera
+            else:
+               for j in self.consultaCTPCMA:
+                    tabla.insert("", END, j[0], values= (j[0],j[1],(j[2] - float(rebajaFij))))
+                           
     def agregarProductoMenu(self, listaProducto, producto, ventana):
         self.cantidad=0
 
@@ -992,6 +1778,9 @@ class PizzaYa():
     def eliminarProductoMenu(self, listaProducto, producto):
         self.cantidad=0
 
+        if len(listaProducto) == 0 or producto == 0:
+            return 0
+
         if listaProducto.get(producto) == 1:
             listaProducto.pop(producto)
         else:
@@ -999,7 +1788,121 @@ class PizzaYa():
             listaProducto.pop(producto)
             listaProducto.setdefault(producto,self.cantidad)
 
-    def agregarPedido(self, cursor, ventana, cliente, pedidos, telefono, nombre, calle, altura, piso, departamento, barrio, listaProductos):
+    def agregarProductoMenuActualizado(self, listaProducto, producto, ventana):
+       
+        if producto == 0:
+            messagebox.showerror("Precios del Menu", "No selecciono ningun producto", parent=ventana)           # Si no se sellecciona producto no se genera
+        else:
+            if listaProducto.count(producto) == 0:
+               listaProducto.append(producto)
+           
+    def eliminarProductoMenuActualizado(self, listaProducto, producto):
+        
+        if listaProducto.count(producto) == 1:
+            listaProducto.remove(producto)
+    
+    def cambiarPrecioMenuActualizado(self, cursor, tabla, listaPedido, opcion, aumentoPorc,
+                                    rebajaPorc, aumentoFij, rebajaFij, ventana, menu, usuario):
+        cursor.execute("SELECT menu_id,descripcion,precio_venta FROM menu WHERE activo = 1 ORDER BY descripcion ASC")
+        self.consulta = cursor.fetchall()
+         
+        if opcion == 0:
+            messagebox.showerror("Precios del Menu", "No Ingreso Ningun Valor", parent=ventana)           # Si no se sellecciona producto no se genera
+                    
+        if opcion == 1:
+            if aumentoPorc.isdigit() == False:
+                messagebox.showerror("Precios del Menu", "Valor Invalido. Ingrese un numero", parent=ventana)           # Si no se sellecciona producto no se genera
+            else:
+                for j in self.consulta:
+                    if listaPedido.count(j[0]):
+                        self.respuesta = messagebox.askyesno("Precios del Menu", "¿Modificar los Precios?", parent=ventana)
+                        if self.respuesta == True:
+                            menu.setPrecioVenta(j[0], (j[2] * float(aumentoPorc))/100+j[2], usuario)
+                            ventana.destroy()
+        if opcion == 2:
+            if rebajaPorc.isdigit() == False:
+                messagebox.showerror("Precios del Menu", "Valor Invalido. Ingrese un numero", parent=ventana)           # Si no se sellecciona producto no se genera
+            else:
+                for j in self.consulta:
+                    if listaPedido.count(j[0]):
+                        self.respuesta = messagebox.askyesno("Precios del Menu", "¿Modificar los Precios?", parent=ventana)
+                        if self.respuesta == True:
+                            menu.setPrecioVenta(j[0], j[2]-(j[2] * float(rebajaPorc))/100, usuario)
+                            ventana.destroy()
+                   
+        if opcion == 3:
+            if aumentoFij.isdigit() == False:
+                messagebox.showerror("Precios del Menu", "Valor Invalido. Ingrese un numero", parent=ventana)           # Si no se sellecciona producto no se genera
+            else:
+               for j in self.consulta:
+                    if listaPedido.count(j[0]):
+                        self.respuesta = messagebox.askyesno("Precios del Menu", "¿Modificar los Precios?", parent=ventana)
+                        if self.respuesta == True:
+                            menu.setPrecioVenta(j[0], float(aumentoFij)+j[2], usuario)
+                            ventana.destroy()
+                        
+        if opcion == 4:
+            if rebajaFij.isdigit() == False:
+                messagebox.showerror("Precios del Menu", "Valor Invalido. Ingrese un numero", parent=ventana)           # Si no se sellecciona producto no se genera
+            else:
+               for j in self.consulta:
+                    if listaPedido.count(j[0]):
+                        self.respuesta = messagebox.askyesno("Precios del Menu", "¿Modificar los Precios?", parent=ventana)
+                        if self.respuesta == True:
+                            menu.setPrecioVenta(j[0], j[2] - float(rebajaFij), usuario)
+                            ventana.destroy()
+      
+    def cambiarPrecioCatMenuActualizado(self, cursor, tabla, opcion, categoria, aumentoPorc,
+                                    rebajaPorc, aumentoFij, rebajaFij, ventana, menu, usuario):
+        cursor.execute("SELECT menu.menu_id,menu.descripcion,menu.precio_venta FROM menu "+
+                        "INNER JOIN categorias_menu ON menu.id_categorias_menu=categorias_menu.categorias_menu_id "+
+                        "WHERE menu.activo = 1 AND categorias_menu.activo = 1 AND categorias_menu.descripcion = '"+categoria+"' "+
+                        "ORDER BY menu.descripcion ASC")
+        self.consulta = cursor.fetchall()
+         
+        if opcion == 0:
+            messagebox.showerror("Precios del Menu", "No Ingreso Ningun Valor", parent=ventana)           # Si no se sellecciona producto no se genera
+                    
+        if opcion == 1:
+            if aumentoPorc.isdigit() == False:
+                messagebox.showerror("Precios del Menu", "Valor Invalido. Ingrese un numero", parent=ventana)           # Si no se sellecciona producto no se genera
+            else:
+                self.respuesta = messagebox.askyesno("Precios del Menu", "¿Modificar los Precios?", parent=ventana)
+                if self.respuesta == True:
+                    for j in self.consulta:
+                        menu.setPrecioVenta(j[0], (j[2] * float(aumentoPorc))/100+j[2], usuario)
+                        ventana.destroy()
+        if opcion == 2:
+            if rebajaPorc.isdigit() == False:
+                messagebox.showerror("Precios del Menu", "Valor Invalido. Ingrese un numero", parent=ventana)           # Si no se sellecciona producto no se genera
+            else:
+                self.respuesta = messagebox.askyesno("Precios del Menu", "¿Modificar los Precios?", parent=ventana)
+                if self.respuesta == True:
+                    for j in self.consulta:
+                        menu.setPrecioVenta(j[0], j[2]-(j[2] * float(rebajaPorc))/100, usuario)
+                        ventana.destroy()
+                   
+        if opcion == 3:
+            if aumentoFij.isdigit() == False:
+                messagebox.showerror("Precios del Menu", "Valor Invalido. Ingrese un numero", parent=ventana)           # Si no se sellecciona producto no se genera
+            else:
+                self.respuesta = messagebox.askyesno("Precios del Menu", "¿Modificar los Precios?", parent=ventana)
+                if self.respuesta == True:
+                    for j in self.consulta:
+                        menu.setPrecioVenta(j[0], float(aumentoFij)+j[2], usuario)
+                        ventana.destroy()
+                        
+        if opcion == 4:
+            if rebajaFij.isdigit() == False:
+                messagebox.showerror("Precios del Menu", "Valor Invalido. Ingrese un numero", parent=ventana)           # Si no se sellecciona producto no se genera
+            else:
+                self.respuesta = messagebox.askyesno("Precios del Menu", "¿Modificar los Precios?", parent=ventana)
+                if self.respuesta == True:
+                    for j in self.consulta:
+                        menu.setPrecioVenta(j[0], j[2] - float(rebajaFij), usuario)
+                        ventana.destroy()
+                        
+    def agregarPedido(self, cursor, ventana, cliente, pedidos, telefono, nombre, calle, altura, piso, departamento, barrio, usuario, listaProductos):
         if nombre == "" or telefono == "" or calle == "" or altura == "":
             messagebox.showerror("Nuevo Pedido", "No se genero el pedido, informacion del cliente incompleta", parent=ventana)
 
@@ -1007,34 +1910,66 @@ class PizzaYa():
             messagebox.showerror("Nuevo Pedido", "No se genero el pedido, no agrego ningun producto", parent=ventana)
 
         else:
-            print(listaProductos)
+            
             cursor.execute("SELECT * FROM clientes WHERE telefono= '"+telefono+"' AND nombre= '"+nombre+"' AND calle= '"+
-           calle+"' AND altura= '"+altura+"'")
+            calle+"' AND altura= '"+altura+"'")
             self.consulta = cursor.fetchall()
         
             if self.consulta == []:
-                cliente.insertar(telefono, nombre, calle, altura, piso, departamento, barrio)
+                cliente.insertar(telefono, nombre, calle, altura, piso, departamento, barrio, str(usuario))
                 cursor.execute("SELECT MAX(clientes_id) FROM clientes")         # busca el ultimo id generado
                 self.consulta = cursor.fetchall()
-                pedidos.insertar(self.consulta[0][0], "No", listaProductos)
+                pedidos.insertar(self.consulta[0][0], "No", listaProductos, usuario)
                 messagebox.showinfo("Nuevo Pedido", "Se genero un nuevo pedido y se agendo un nuevo cliente",
                                     parent=ventana)
             else:
-                pedidos.insertar(self.consulta[0][0], "No", listaProductos)
+                pedidos.insertar(self.consulta[0][0], "No", listaProductos, usuario)
                 messagebox.showinfo("Nuevo Pedido", "Se genero un nuevo pedido", parent=ventana)
+            
+            self.imprimirTicket(cursor, telefono, nombre, calle, altura, piso, departamento, barrio, listaProductos)
+
+    def imprimirTicket(self, cursor, telefono, nombre, calle, altura, piso, departamento, barrio, listaProductos):
+        
+        cursor.execute("SELECT pedidos_id, total, fecha FROM pedidos ORDER BY pedidos_id DESC LIMIT 1")
+        self.consultaIT = cursor.fetchall()
+
+        self.numeroTicket = str(self.consultaIT[0][0])
+        self.ruta= "../Ticket/"+self.numeroTicket+".txt"
+
+        self.archivo=open(self.ruta,"w") 
+        self.archivo.write("**************************\n")
+        self.archivo.write("*        PizzaYa         *\t\tTicket: "+self.numeroTicket+"\t\tFecha: "+str(self.consultaIT[0][2])+"\n")
+        self.archivo.write("**************************\n\n")
+        self.archivo.write("Nombre: "+nombre+"\t\t\tTelefono: "+telefono+"\n\n")
+        self.archivo.write("Direccion: "+calle+" "+altura+"\tPiso: "+piso+" "+departamento+"\t\t\tBarrio: "+barrio+"\n")
+        self.archivo.write("------------------------------------------------------------------------------------------\n")
+        self.archivo.write("Cantidad\tDescripcion\t\t\t\t\t\t\tPrecio\n")
+        self.archivo.write("------------------------------------------------------------------------------------------\n")
+        
+        for producto in listaProductos:
+            cursor.execute("SELECT descripcion, precio_venta FROM menu WHERE menu_id= "+ str(producto[0]))
+            self.consultaPro = cursor.fetchall()
+
+            self.archivo.write(" "+str(producto[1])+"\t\t"+self.consultaPro[0][0]+"\t\t\t\t\t\t\t"+str(self.consultaPro[0][1])+"\n")
+
+        self.archivo.write("------------------------------------------------------------------------------------------\n")
+        self.archivo.write("\t\t\t\t\t\t\t\t\tTotal:  $"+str(self.consultaIT[0][1])+"\n")
+        self.archivo.close()
+        os.system("notepad.exe "+self.ruta)
+        
 
     def busquedaCliente(self, cursor, ventana, tabla, telefono):
-        cursor.execute("SELECT * FROM clientes WHERE telefono= '"+telefono+"' AND visible=1")
+        cursor.execute("SELECT clientes_id,telefono,nombre,calle,altura,piso,departamento,barrio FROM clientes "+
+                        "WHERE telefono= '"+telefono+"' AND activo=1")
         self.consulta = cursor.fetchall()
 
         if self.consulta == []:                                                          # Si no existe
             messagebox.showinfo("Buscar Cliente", "No Hay Ningun Cliente Asociado con el Numero Telefonico", parent=ventana)
         else:
             for i in self.consulta:
-                id = i[0]
-                tabla.insert("", END, id, values= i)
+                tabla.insert("", END, i[0], values= i)
 
-    def guardarCliente(self, cursor, ventana, cliente, telefono, nombre, calle, altura, piso, departamento, barrio):
+    def guardarCliente(self, cursor, ventana, cliente, telefono, nombre, calle, altura, piso, departamento, barrio, usuario):
         cursor.execute("SELECT * FROM clientes WHERE nombre= '"+nombre+              # Busca Existente
             "' AND telefono= '"+telefono+"' AND calle= '"+calle+"'")
         self.consulta = cursor.fetchall()
@@ -1043,7 +1978,7 @@ class PizzaYa():
             if telefono =="" or nombre =="":                                        # Tiene que tener telefono y nombre
                 messagebox.showerror("Cliente", "No se Pueden Agregar Clientes sin Nombre ni Telefono", parent=ventana)
             else:
-                cliente.insertar(telefono, nombre, calle, altura, piso, departamento, barrio)
+                cliente.insertar(telefono, nombre, calle, altura, piso, departamento, barrio, str(usuario))
                 messagebox.showinfo("Cliente", "Se Agrego el Cliente Exitosamente", parent=ventana)
         else:
             messagebox.showinfo("Cliente", "El Cliente Ya Existe", parent=ventana)
@@ -1051,26 +1986,59 @@ class PizzaYa():
     def borrarCliente(self, cliente, ventana, id):
         self.respuesta = messagebox.askyesno("Cliente", "¿Eliminar Cliente?", parent=ventana)
         if self.respuesta == True:
-            print(id)
             cliente.borrar(id)
 
-    def modificarCliente(self, cursor, ventana, cliente, id, telefono, nombre, calle, altura, piso, departamento, barrio):
+    def modificarCliente(self, ventana, cliente, id, telefono, nombre, calle, altura, piso, departamento, barrio, usuario):
         self.respuesta = messagebox.askyesno("Cliente", "¿Modificar Cliente?", parent=ventana)
         if self.respuesta == True:
-            cliente.setTelefono(id, telefono)
-            cliente.setNombre(id, nombre)
-            cliente.setCalle(id, calle)
-            cliente.setAltura(id, altura)
-            cliente.setPiso(id, piso)
-            cliente.setDepartamento(id, departamento)
-            cliente.setBarrio(id, barrio)
+            cliente.setTelefono(id, telefono, usuario)
+            cliente.setNombre(id, nombre, usuario)
+            cliente.setCalle(id, calle, usuario)
+            cliente.setAltura(id, altura, usuario)
+            cliente.setPiso(id, piso, usuario)
+            cliente.setDepartamento(id, departamento, usuario)
+            cliente.setBarrio(id, barrio, usuario)
 
-    def guardarMenu(self, cursor, ventana, menu, descripcion, precioVenta):
+    def guardarUsuario(self, cursor, ventana, usuarios, usuario, contrasenia, nombre, telefono, mail,
+                        calle, altura, piso, departamento, barrio):
+        cursor.execute("SELECT * FROM usuarios WHERE usuario= '"+usuario+"'")              # Busca Existente
+        self.consulta = cursor.fetchall()
+        
+        if self.consulta == []:                                                          # Si no existe lo guarda
+            if usuario =="" or contrasenia =="":                                        # Tiene que tener telefono y nombre
+                messagebox.showerror("Usuario", "Falta Completar Usuario o Contraseña", parent=ventana)
+            else:
+                usuarios.insertar(usuario, contrasenia, nombre, telefono, mail, calle, altura, piso, departamento, barrio)
+                messagebox.showinfo("Usuario", "Se Agrego el Cliente Exitosamente", parent=ventana)
+        else:
+            messagebox.showinfo("Usuario", "El Usuario Ya Existe", parent=ventana)
+
+    def borrarUsuario(self, usuario, ventana, id):
+        self.respuesta = messagebox.askyesno("Usuario", "¿Eliminar Usuario?", parent=ventana)
+        if self.respuesta == True:
+            usuario.borrar(id)
+
+    def modificarUsuario(self, cursor, ventana, usuario, id, usuar, contrasenia, nombre, telefono, mail, calle,
+                        altura, piso, departamento, barrio):
+        self.respuesta = messagebox.askyesno("Usuario", "¿Modificar Usuario?", parent=ventana)
+        if self.respuesta == True:
+            usuario.setUsuario(id, usuar)
+            usuario.setContrasenia(id, contrasenia)
+            usuario.setNombre(id, nombre)
+            usuario.setTelefono(id, telefono)
+            usuario.setMail(id, mail)
+            usuario.setCalle(id, calle)
+            usuario.setAltura(id, altura)
+            usuario.setPiso(id, piso)
+            usuario.setDepartamento(id, departamento)
+            usuario.setBarrio(id, barrio)
+
+    def guardarMenu(self, cursor, ventana, menu, descripcion, precioVenta, categoria, usuario):
         cursor.execute("SELECT * FROM menu WHERE descripcion= '"+descripcion+"'")
         self.consulta = cursor.fetchall()
         
         if self.consulta == []:                                                          # Si no existe lo guarda
-            menu.insertar(descripcion, precioVenta)
+            menu.insertar(descripcion, precioVenta, categoria, usuario)
             messagebox.showinfo("Menu", "Se Agrego el Producto Exitosamente", parent=ventana)
         else:
             messagebox.showinfo("Menu", "El Producto Ya Existe", parent=ventana)
@@ -1080,49 +2048,98 @@ class PizzaYa():
         if self.respuesta == True:
             menu.borrar(id)
             
-    def modificarMenu(self, ventana, menu, id, descripcion, precioVenta):
+    def modificarMenu(self, ventana, menu, id, descripcion, precioVenta, categoria, usuario):
         self.respuesta = messagebox.askyesno("Menu", "¿Modificar Producto?", parent=ventana)
         if self.respuesta == True:
-            menu.setDescripcion(id, descripcion)
-            menu.setPrecioVenta(id, precioVenta)
+            menu.setDescripcion(id, descripcion, usuario)
+            menu.setPrecioVenta(id, precioVenta, usuario)
+            menu.setCategoria(id, categoria, usuario)
+     
+    def guardarCategoriasMenu(self, cursor, ventana, categorias, descripcion, usuario):
+        cursor.execute("SELECT * FROM categorias_menu WHERE descripcion= '"+descripcion+"'")
+        self.consulta = cursor.fetchall()
+        
+        if self.consulta == []:                                                          # Si no existe lo guarda
+            categorias.insertar(descripcion, usuario)
+            messagebox.showinfo("Categorias", "Se Agrego la Categorias Exitosamente", parent=ventana)
+        else:
+            messagebox.showinfo("Categorias", "La Categoria Ya Existe", parent=ventana)
 
-    def cambiarEstadoPedido(self, pedidos, ventana, estado, id):
+    def borrarCategoriasMenu(self, categorias, ventana, id):
+        self.respuesta = messagebox.askyesno("Categorias", "¿Eliminar Categoria?", parent=ventana)
+        if self.respuesta == True:
+            categorias.borrar(id)
+            
+    def modificarCategoriasMenu(self, ventana, categorias, id, descripcion, usuario):
+        self.respuesta = messagebox.askyesno("Categorias", "¿Modificar Categoria?", parent=ventana)
+        if self.respuesta == True:
+            categorias.setDescripcion(id, descripcion, usuario)
+     
+    def completarListaCategoria(self, cursor):
+        cursor.execute("SELECT * FROM categorias_menu WHERE activo = '1' "+
+                        "ORDER BY descripcion ASC")
+        self.consulta = cursor.fetchall()
+        self.lista=[]
+
+        for i in self.consulta:
+            self.lista.append(i[3])
+        return self.lista
+
+    def cambiarEstadoPedido(self, pedidos, ventana, estado, id, usuario):
         if estado == 1:
-            pedidos.setEstado(id, "Preparacion")
+            pedidos.setEstado(id, "Preparacion", usuario)
         if estado == 2:
-            pedidos.setEstado(id, "En Camino")
+            pedidos.setEstado(id, "En Camino", usuario)
         if estado == 3:
             self.respuesta = messagebox.askyesno("Pedido", "¿Modificar estado a Entregado?", parent=ventana)
             if self.respuesta == True:
-                pedidos.setEstado(id, "Entregado")
+                pedidos.setEstado(id, "Entregado", usuario)
         if estado == 4:
             self.respuesta = messagebox.askyesno("Pedido", "¿Modificar estado a Cancelado?", parent=ventana)
             if self.respuesta == True:
-                pedidos.setEstado(id, "Cancelado")
+                pedidos.setEstado(id, "Cancelado", usuario)
 
         self.vaciarTabla(self.listaPedidos)
         self.completarTablaPedidos(self.cursorBD, self.listaPedidos)
 
-    def cambiarEstadoPago(self, pedidos, pago, id):
+    def cambiarEstadoPago(self, pedidos, pago, id, usuario):
         if pago == 0:
-            pedidos.setPago(id, "No")
+            pedidos.setPago(id, "No", usuario)
         if pago == 1:
-            pedidos.setPago(id, "Si")
+            pedidos.setPago(id, "Si", usuario)
         
         self.vaciarTabla(self.listaPedidos)
         self.completarTablaPedidos(self.cursorBD, self.listaPedidos)
-    
+
     def salir(self):                                                        #boton de salir con mensaje de confirmacion
         self.respuesta = messagebox.askquestion("Salir", "Desea Salir", parent=self.ventana)
 
         if self.respuesta == "yes":
             self.ventana.destroy()
-
-
+    
 
 def main():
-    mi_app = PizzaYa()
-    return(0)
+
+    basDat = BaseDeDatos("localhost", "root", "", "pizzaya")
+    cu = basDat.getCursor()
+    ic = r"..\img\logo.ico"
+    re = Reportes(basDat, cu)
+    cl = Clientes(basDat, cu)
+    ca = CategoriasMenuProductos(basDat, cu)
+    me = MenuProductos(basDat, cu)
+    pe = Pedidos(basDat, cu)
+    us = Usuarios(basDat, cu)
+    
+    try:
+        mi_login = Login(basDat, cu, ic)
+
+        if mi_login.estaOk() == 1:
+            mi_app = PizzaYa(2, cu, ic, re, cl, ca, me, pe, us)
+    
+        return(0)
+    
+    except mysql.connector.errors.DatabaseError:
+        messagebox.showerror("PizzaYa", "Sin Conexión con la Base de Datos.")
 
 if __name__ == '__main__':
     main()
