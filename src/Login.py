@@ -3,9 +3,8 @@ from tkinter import *
 
 class Login:
     
-    def __init__(self, basD, cur, ico):
+    def __init__(self, cur, ico):
 
-        self.bd = basD
         self.cursor = cur
         self.icono = ico
         
@@ -22,6 +21,7 @@ class Login:
         self.ventanaLogin.title("Login")                                      
         self.ventanaLogin.iconbitmap(self.icono)                            
 
+        self.usuarioId = IntVar(value=0)
         self.accesoOk = IntVar(value=0)
 
         self.marco=LabelFrame(self.ventanaLogin)
@@ -49,7 +49,8 @@ class Login:
         self.intentos = IntVar(value=3)
 
         self.botonAceptar = Button(self.marco, text="Aceptar", width=10, height=1, command=lambda:[self.verificarUsuario(self.cursor,
-                            self.bd, self.ventanaLogin, self.usuario.get(), self.cont.get(), self.intentos, self.accesoOk, self.contador),
+                            self.ventanaLogin, self.usuario.get(), self.cont.get(), self.intentos, self.accesoOk, self.contador,
+                            self.usuarioId),
                             self.usuario.delete(0, "end"), self.cont.delete(0, "end")])
         self.botonAceptar.place(x=80,y=150)
 
@@ -62,8 +63,8 @@ class Login:
 
 
         def teclaEnterCont(event):
-            self.verificarUsuario(self.cursor, self.bd, self.ventanaLogin, self.usuario.get(), self.cont.get(),
-                                    self.intentos, self.accesoOk, self.contador)
+            self.verificarUsuario(self.cursor, self.ventanaLogin, self.usuario.get(), self.cont.get(),
+                                    self.intentos, self.accesoOk, self.contador, self.usuarioId)
             self.usuario.delete(0, "end")
             self.cont.delete(0, "end")
             self.usuario.focus_set()
@@ -71,13 +72,11 @@ class Login:
         self.usuario.bind("<Return>", teclaEnterUs)
         self.cont.bind("<Return>", teclaEnterCont)
 
-        self.bd.connection.commit()
-    
-        
+
         self.ventanaLogin.mainloop()                      #loop de la ventana esperando accion del usuario
 
     
-    def verificarUsuario(self, cursor, bD, ventana, usuario, contrasenia, intentos, acceso, texto):
+    def verificarUsuario(self, cursor, ventana, usuario, contrasenia, intentos, acceso, texto, usId):
         cursor.execute("SELECT * FROM usuarios WHERE usuario= '"+usuario+"' AND contrasenia='"+contrasenia+"'")
         self.consulta = cursor.fetchall()
 
@@ -85,12 +84,18 @@ class Login:
         texto.configure(text="Usuario o contraseña incorrecto. Quedan " +str(intentos.get())+ " intentos")
         
         if intentos.get() <= 0:
-            ventana.destroy()
+            exit()
 
         if self.consulta != []:
             acceso.set(1)
-            bD.connection.commit()
+            usId.set(int(self.consulta[0][0]))
             ventana.destroy()
     
     def estaOk(self):
         return self.accesoOk.get()
+
+    def getUsuario(self):
+        return self.usuarioId.get()
+
+    def __del__(self):
+        pass        

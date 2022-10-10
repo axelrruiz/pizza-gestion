@@ -17,8 +17,9 @@ from Login import *
 
 
 class PizzaYa():
-    def __init__(self, cuentaUsuario, cur, ico, rep, cli, cat, me, ped, usu):
+    def __init__(self, cue, cur, ico, rep, cli, cat, me, ped, usu):
 
+        self.cuentaUsuario = cue
         self.cursorBD = cur
         self.icono = ico
         self.reporte = rep
@@ -33,6 +34,7 @@ class PizzaYa():
         #   ********************                Ventanas                                           ********************
         #   ***********************************************************************************************************
 
+       
         '''   ********************                Ventana Principal                                  ********************'''
 
         self.anchoVentana = 800
@@ -47,26 +49,26 @@ class PizzaYa():
         self.ventana.iconbitmap(self.icono)                                                       # Icono de la ventana
         self.barraMenu=Menu(self.ventana)                                                         # crea la barra de menu
         self.ventana.config(menu=self.barraMenu)                                                  # vincula la barra de menu con la ventana
+        self.ventana.protocol("WM_DELETE_WINDOW", lambda:self.salir())
 
-        
         #   ********************                Barra de Menu                                        ********************
 
         self.opcionesMenu = Menu(self.barraMenu, tearoff=0)                            
         self.barraMenu.add_cascade(label="Opciones", menu=self.opcionesMenu)
-        self.opcionesMenu.add_command(label="Actualizar Precios por Categorias", command=lambda:self.preciosPorCategoria(self.cursorBD, self.ventana, self.men, cuentaUsuario))
-        self.opcionesMenu.add_command(label="Actualizar Precios por Productos", command=lambda:self.preciosPorProducto(self.cursorBD, self.ventana, self.men, cuentaUsuario))
+        self.opcionesMenu.add_command(label="Actualizar Precios por Categorias", command=lambda:self.preciosPorCategoria(self.cursorBD, self.ventana, self.men, self.cuentaUsuario))
+        self.opcionesMenu.add_command(label="Actualizar Precios por Productos", command=lambda:self.preciosPorProducto(self.cursorBD, self.ventana, self.men, self.cuentaUsuario))
         self.opcionesMenu.add_command(label="Administrar Usuarios", command=lambda:self.usuarios(self.cursorBD, self.ventana, self.usuario))
         self.opcionesMenu.add_separator()                                         #linea separador
-        self.opcionesMenu.add_command(label="Cerrar Sesión", command=lambda:self.salir())
+        self.opcionesMenu.add_command(label="Cerrar Sesión", command=lambda:self.cerrarSesion())
         self.opcionesMenu.add_command(label="Salir", command=lambda:self.salir())
 
         self.ventanaEmergenteCLientes = Menu(self.barraMenu, tearoff=0)
-        self.barraMenu.add_cascade(label="Clientes", command=lambda:self.clientes(self.cursorBD, self.ventana, self.cliente, cuentaUsuario))
+        self.barraMenu.add_cascade(label="Clientes", command=lambda:self.clientes(self.cursorBD, self.ventana, self.cliente, self.cuentaUsuario))
 
         self.ventanaEmergenteMenu = Menu(self.barraMenu, tearoff=0)
         self.barraMenu.add_cascade(label="Menu", menu=self.ventanaEmergenteMenu)
-        self.ventanaEmergenteMenu.add_command(label="Administrar Categorias", command=lambda:self.categoriasMenu(self.cursorBD, self.ventana, self.categoriaMen, cuentaUsuario))
-        self.ventanaEmergenteMenu.add_command(label="Administrar Menu", command=lambda:self.menu(self.cursorBD, self.ventana, self.men, cuentaUsuario))
+        self.ventanaEmergenteMenu.add_command(label="Administrar Categorias", command=lambda:self.categoriasMenu(self.cursorBD, self.ventana, self.categoriaMen, self.cuentaUsuario))
+        self.ventanaEmergenteMenu.add_command(label="Administrar Menu", command=lambda:self.menu(self.cursorBD, self.ventana, self.men, self.cuentaUsuario))
 
         self.ventanaEmergenteReporte = Menu(self.barraMenu, tearoff=0)
         self.barraMenu.add_cascade(label="Reporte", menu=self.ventanaEmergenteReporte)
@@ -151,28 +153,28 @@ class PizzaYa():
 
 
         self.preparacion=Radiobutton(self.marcoSuperior, text="Preparacion", variable=self.estado, value=1,
-                                    command=lambda:self.cambiarEstadoPedido(self.pedidos, self.ventana, self.estado.get(), self.pedidoId.get(), cuentaUsuario))
+                                    command=lambda:self.cambiarEstadoPedido(self.pedidos, self.ventana, self.estado.get(), self.pedidoId.get(), self.cuentaUsuario))
         self.preparacion.place(x=620, y=50)
 
         self.enCamino=Radiobutton(self.marcoSuperior, text="En Camino", variable=self.estado, value=2,
-                                    command=lambda:self.cambiarEstadoPedido(self.pedidos, self.ventana, self.estado.get(), self.pedidoId.get(), cuentaUsuario))
+                                    command=lambda:self.cambiarEstadoPedido(self.pedidos, self.ventana, self.estado.get(), self.pedidoId.get(), self.cuentaUsuario))
         self.enCamino.place(x=620, y=75)
 
         self.entregado=Radiobutton(self.marcoSuperior, text="Entregado", variable=self.estado, value=3,
-                                    command=lambda:self.cambiarEstadoPedido(self.pedidos, self.ventana, self.estado.get(), self.pedidoId.get(), cuentaUsuario))
+                                    command=lambda:self.cambiarEstadoPedido(self.pedidos, self.ventana, self.estado.get(), self.pedidoId.get(), self.cuentaUsuario))
         self.entregado.place(x=620, y=100)
         
         self.cancelado=Radiobutton(self.marcoSuperior, text="Cancelado", variable=self.estado, value=4,
-                                    command=lambda:self.cambiarEstadoPedido(self.pedidos, self.ventana, self.estado.get(), self.pedidoId.get(), cuentaUsuario))
+                                    command=lambda:self.cambiarEstadoPedido(self.pedidos, self.ventana, self.estado.get(), self.pedidoId.get(), self.cuentaUsuario))
         self.cancelado.place(x=620, y=125)
 
         self.estaPago=Checkbutton(self.marcoSuperior, text="Esta Pago", variable=self.pago, onvalue=1, offvalue=0,
-                                    command=lambda:self.cambiarEstadoPago(self.pedidos, self.pago.get(), self.pedidoId.get(), cuentaUsuario))
+                                    command=lambda:self.cambiarEstadoPago(self.pedidos, self.pago.get(), self.pedidoId.get(), self.cuentaUsuario))
         self.estaPago.place(x=620, y=165)
 
 
         self.botonNuevoPedido = Button(self.marcoSuperior, text="Nuevo Pedido", width=15, height=1, command=lambda:[self.nuevoPedido(self.cursorBD,
-                                    self.ventana, self.cliente, self.pedidos, cuentaUsuario)])
+                                    self.ventana, self.cliente, self.pedidos, self.cuentaUsuario)])
         self.botonNuevoPedido.place(x=620, y=200)
 
 
@@ -246,7 +248,7 @@ class PizzaYa():
         self.listaPedidos.config(xscrollcommand=self.scrollHotizontal.set)
 
         self.completarTablaPedidos(self.cursorBD, self.listaPedidos)
-
+        
         self.ventana.mainloop()                      #loop de la ventana esperando accion del usuario
 
 
@@ -289,7 +291,6 @@ class PizzaYa():
         
         self.totalreporteMensual = Label(self.marcoSuperiorMensual, text="$ 0")
         self.totalreporteMensual.place(x=100, y=65)
-
 
         self.botonSalirreporteMensual = Button(self.marcoSuperiorMensual, text="Salir", width=10, height=1,
                                 command=lambda:self.ventanaReporteMensual.destroy())
@@ -2115,11 +2116,20 @@ class PizzaYa():
         self.respuesta = messagebox.askquestion("Salir", "Desea Salir", parent=self.ventana)
 
         if self.respuesta == "yes":
+            exit()
+    
+    def cerrarSesion(self):                                                        #boton de salir con mensaje de confirmacion
+        self.respuesta = messagebox.askquestion("Cerrar Sesion", "Desea Cerrar Sesion", parent=self.ventana)
+
+        if self.respuesta == "yes":
             self.ventana.destroy()
     
+    def __del__(self):
+        pass
+
+
 
 def main():
-
     basDat = BaseDeDatos("localhost", "root", "", "pizzaya")
     cu = basDat.getCursor()
     ic = r"..\img\logo.ico"
@@ -2131,13 +2141,17 @@ def main():
     us = Usuarios(basDat, cu)
     
     try:
-        mi_login = Login(basDat, cu, ic)
+        while True:
+            mi_login = Login(cu, ic)
+                
+            if mi_login.estaOk() == 1:
+                mi_app = PizzaYa(mi_login.getUsuario(), cu, ic, re, cl, ca, me, pe, us)
 
-        if mi_login.estaOk() == 1:
-            mi_app = PizzaYa(2, cu, ic, re, cl, ca, me, pe, us)
-    
-        return(0)
-    
+            else: 
+                exit()
+            del mi_login
+            del mi_app
+
     except mysql.connector.errors.DatabaseError:
         messagebox.showerror("PizzaYa", "Sin Conexión con la Base de Datos.")
 
