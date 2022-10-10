@@ -45,7 +45,7 @@ class PizzaYa():
         self.yventana = int(self.ventana.winfo_screenheight()/2 - self.altoVentana/1.7)                # Variable para obtener la mitad de la pantalla
         self.ventana.geometry(str(self.anchoVentana) + "x" + str(self.altoVentana)                     # Tamaño de la ventana
         + "+" + str(self.xventana) + "+" + str(self.yventana))                                    # Posicion de la ventana en windows
-        self.ventana.title("PizzaYa")                                                        # Titulo de la ventana
+        self.ventana.title("PizzaYa")                                                             # Titulo de la ventana
         self.ventana.iconbitmap(self.icono)                                                       # Icono de la ventana
         self.barraMenu=Menu(self.ventana)                                                         # crea la barra de menu
         self.ventana.config(menu=self.barraMenu)                                                  # vincula la barra de menu con la ventana
@@ -2142,15 +2142,15 @@ def main():
     
     try:
         while True:
-            mi_login = Login(cu, ic)
+            log = Login(cu, ic)
                 
-            if mi_login.estaOk() == 1:
-                mi_app = PizzaYa(mi_login.getUsuario(), cu, ic, re, cl, ca, me, pe, us)
+            if log.estaOk() == 1:
+                app = PizzaYa(log.getUsuario(), cu, ic, re, cl, ca, me, pe, us)
 
             else: 
                 exit()
-            del mi_login
-            del mi_app
+            del log
+            del app
 
     except mysql.connector.errors.DatabaseError:
         messagebox.showerror("PizzaYa", "Sin Conexión con la Base de Datos.")
