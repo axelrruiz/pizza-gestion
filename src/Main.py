@@ -4,9 +4,9 @@ from tkinter import *
 from tkinter import ttk
 from tkinter import messagebox
 from tkinter.ttk import Combobox
-from tkcalendar import *                                                     #hay que instalarlo  pip install tkcalendar
 from datetime import date
 from datetime import datetime
+from tkcalendar import *                                                     #hay que instalarlo  pip install tkcalendar
 from Pedidos import *
 from Reportes import *
 from Clientes import *
@@ -1474,7 +1474,6 @@ class PizzaYa():
         self.botonSalir = Button(self.marcoSuperiorMenu, text="Salir", width=10, height=1, command=lambda:self.ventanaMenu.destroy())
         self.botonSalir.place(x=500,y=100)
 
-
         def clickMenu(event):
             if len(self.listaMenu.selection())>0:
                 idMenu= self.listaMenu.selection()[0]
@@ -1486,7 +1485,6 @@ class PizzaYa():
                 self.pvMenu=self.listaMenu.item(idMenu, "values")[2]
                 self.precioVentaMenu.insert(0, self.pvMenu)
                 self.categoriaMenu.current(int(self.listaMenu.item(idMenu, "values")[6])-1)
-                                
 
         self.listaMenu=ttk.Treeview(self.marcoMenu, columns=("menu_id","descripcion","precio_venta","crea","modifica",
                                     "categoria","categorias_menu.categorias_menu_id"),
@@ -2078,14 +2076,14 @@ class PizzaYa():
             categorias.setDescripcion(id, descripcion, usuario)
      
     def completarListaCategoria(self, cursor):
-        cursor.execute("SELECT * FROM categorias_menu WHERE activo = '1' "+
-                        "ORDER BY descripcion ASC")
-        self.consulta = cursor.fetchall()
-        self.lista=[]
+        cursor.execute("SELECT * FROM categorias_menu WHERE activo = '1' ")
+        self.consultaCLC = cursor.fetchall()
+        self.listaCLC=[]
 
-        for i in self.consulta:
-            self.lista.append(i[3])
-        return self.lista
+        for i in self.consultaCLC:
+            self.listaCLC.append(i[3])
+
+        return self.listaCLC
 
     def cambiarEstadoPedido(self, pedidos, ventana, estado, id, usuario):
         if estado == 1:
