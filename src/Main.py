@@ -2142,19 +2142,16 @@ def main():
     us = Usuarios(basDat, cu)
     
     try:
-        #while True:
-        #    log = Login(cu, ic)
+        while True:
+            log = Login(cu, ic)
                 
-        #    if log.estaOk() == 1:
-        #        app = PizzaYa(log.getUsuario(), cu, ic, re, cl, ca, me, pe, us)
+            if log.estaOk() == 1:
+                app = PizzaYa(log.getUsuario(), cu, ic, re, cl, ca, me, pe, us)
 
-        #    else: 
-        #        exit()
-        #    del log
-        #    del app
-
-        mi_app = PizzaYa(2,cu, ic, re, cl, ca, me, pe, us)
-            
+            else: 
+                exit()
+            del log
+            del app
 
     except mysql.connector.errors.DatabaseError:
         messagebox.showerror("PizzaYa", "Sin Conexión con la Base de Datos.")
