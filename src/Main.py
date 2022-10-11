@@ -84,9 +84,9 @@ class PizzaYa():
         self.pago = IntVar()
         
         def click(event):
-            id= self.listaPedidos.selection()[0]
-            self.vaciarTabla(self.listaDetallePedido)
-            if int(id)>0:
+            if len(self.listaPedidos.selection())>0:
+                self.vaciarTabla(self.listaDetallePedido)
+                id= self.listaPedidos.selection()[0]
                 self.pedidoId.set(value=(self.listaPedidos.item(id, "values")[0]))
                 self.completarTablaDetallePedidos(self.cursorBD, self.listaDetallePedido, self.pedidoId.get())
                 self.telefono.config(text="Telefono:  "+self.listaPedidos.item(id, "values")[10])
@@ -96,7 +96,7 @@ class PizzaYa():
                 self.piso.config(text="Piso: "+self.listaPedidos.item(id, "values")[3])
                 self.departamento.config(text="Depto: "+self.listaPedidos.item(id, "values")[4])
                 self.barrio.config(text=self.listaPedidos.item(id, "values")[5])
-                self.total.config(text= ("$")+ str(self.listaPedidos.item(id, "values")[8]))
+                self.total.config(text= "$" + self.listaPedidos.item(id, "values")[8])
                 self.hora.config(text=(self.listaPedidos.item(id, "values")[11])[11:16])
                 if (self.listaPedidos.item(id, "values")[7]) == "Si":
                     self.pago.set(1)
@@ -180,7 +180,8 @@ class PizzaYa():
 
         #                    Lista Detalle de Pedidos                                   
 
-        self.listaDetallePedido=ttk.Treeview(self.marcoSuperior, columns= ("cantidad","descripcion","precio_venta"))
+        self.listaDetallePedido=ttk.Treeview(self.marcoSuperior, columns= ("detalle_pedidos_id","cantidad","descripcion","precio_venta"),
+                                                displaycolumns=("cantidad","descripcion","precio_venta"))
         self.listaDetallePedido.column("#0",width=0, stretch=NO)
         self.listaDetallePedido.column("cantidad",width=10, anchor=CENTER)
         self.listaDetallePedido.column("descripcion",width=250) 
@@ -524,8 +525,8 @@ class PizzaYa():
         self.botonSalirbuscarCliente.place(x=500,y=100)
 
         def clickbuscarCliente(event):
-            idbuscarCliente= self.listaClientesbuscarCliente.selection()[0]
-            if int(idbuscarCliente)>0:
+           if len(self.listaClientesbuscarCliente.selection())>0:
+                idbuscarCliente= self.listaClientesbuscarCliente.selection()[0]
                 self.clienteIdbuscarCliente.set(value=(self.listaClientesbuscarCliente.item(idbuscarCliente, "values")[0]))
                 self.telefonobuscarCliente.delete(0, "end")
                 tel=self.listaClientesbuscarCliente.item(idbuscarCliente, "values")[1]
@@ -687,15 +688,15 @@ class PizzaYa():
         self.botonBorrarNP.place(x=190,y=10)
 
         def clickMenuNP(event):
-            idclickMenuNP = self.listaMenuNP.selection()[0]
-            if int(idclickMenuNP)>0:
+            if len(self.listaMenuNP.selection())>0:
+                idclickMenuNP = self.listaMenuNP.selection()[0]
                 self.menuIdNP.set(value=(self.listaMenuNP.item(idclickMenuNP, "values")[0]))
                             
         def clickPedidoNP(event):
-            idclickPedidoNP= self.listaPedidoNP.selection()[0]
-            if int(idclickPedidoNP)>0:
+            if len(self.listaPedidoNP.selection())>0:
+                idclickPedidoNP= self.listaPedidoNP.selection()[0]
                 self.productoIdNP.set(value=(self.listaMenuNP.item(idclickPedidoNP, "values")[0]))
-         
+          
         self.listaMenuNP=ttk.Treeview(self.marcoMenuNP, columns=("menu_id","descripcion","precio_venta"),
                                     displaycolumns=("descripcion","precio_venta"))
         self.listaMenuNP.column("#0",width=0, stretch=NO) 
@@ -849,13 +850,13 @@ class PizzaYa():
         self.botonBorrarPP.place(x=190,y=10)
 
         def clickMenuActualPP(event):
-            idPP= self.listaMenuActualPP.selection()[0]
-            if int(idPP)>0:
+            if len(self.listaMenuActualPP.selection())>0:
+                idPP= self.listaMenuActualPP.selection()[0]
                 self.menuIdPrecioPP.set(value=(self.listaMenuActualPP.item(idPP, "values")[0]))
                 
         def clickMenuNuevoPP(event):
-            idPPN= self.listaMenuNuevoPP.selection()[0]
-            if int(idPPN)>0:
+            if len(self.listaMenuNuevoPP.selection())>0:
+                idPPN= self.listaMenuNuevoPP.selection()[0]
                 self.productoIdPrecioPP.set(value=(self.listaMenuNuevoPP.item(idPPN, "values")[0]))
                 
         self.listaMenuActualPP=ttk.Treeview(self.marcoMenuActualPP, columns=("menu_id","descripcion","precio_venta"),
@@ -1141,8 +1142,8 @@ class PizzaYa():
         self.botonSalirClientes.place(x=500,y=100)
 
         def clickClientes(event):
-            idClientes= self.listaClientes.selection()[0]
-            if int(idClientes)>0:
+            if len(self.listaClientes.selection())>0:
+                idClientes= self.listaClientes.selection()[0]
                 self.clienteId.set(value=(self.listaClientes.item(idClientes, "values")[0]))
                 self.telefonoClientes.delete(0, "end")
                 self.telClientes=self.listaClientes.item(idClientes, "values")[3]
@@ -1326,39 +1327,39 @@ class PizzaYa():
         self.botonSalir = Button(self.marcoSuperiorUsuarios, text="Salir", width=10, height=1, command=lambda:self.ventanaUsuarios.destroy())
         self.botonSalir.place(x=500,y=150)
 
-        def click(event):
-            id= self.listaUsuarios.selection()[0]
-            if int(id)>0:
-                self.usuarioId.set(value=(self.listaUsuarios.item(id, "values")[0]))
+        def clickUsuarios(event):
+            if len(self.listaUsuarios.selection())>0:
+                idUsuarios= self.listaUsuarios.selection()[0]
+                self.usuarioId.set(value=(self.listaUsuarios.item(idUsuarios, "values")[0]))
                 self.usuarioUsuario.delete(0, "end")
-                self.usuUsuario=self.listaUsuarios.item(id, "values")[1]
+                self.usuUsuario=self.listaUsuarios.item(idUsuarios, "values")[1]
                 self.usuarioUsuario.insert(0, self.usuUsuario)
                 self.contraseniaUsuario.delete(0, "end")
-                self.conUsuario=self.listaUsuarios.item(id, "values")[2]
+                self.conUsuario=self.listaUsuarios.item(idUsuarios, "values")[2]
                 self.contraseniaUsuario.insert(0, self.conUsuario)
                 self.nombreUsuario.delete(0, "end")
-                self.nomUsuario=self.listaUsuarios.item(id, "values")[3]
+                self.nomUsuario=self.listaUsuarios.item(idUsuarios, "values")[3]
                 self.nombreUsuario.insert(0, self.nomUsuario)
                 self.telefonoUsuario.delete(0, "end")
-                self.telUsuario=self.listaUsuarios.item(id, "values")[4]
+                self.telUsuario=self.listaUsuarios.item(idUsuarios, "values")[4]
                 self.telefonoUsuario.insert(0, self.telUsuario)
                 self.mailUsuario.delete(0, "end")
-                self.maiUsuario=self.listaUsuarios.item(id, "values")[5]
+                self.maiUsuario=self.listaUsuarios.item(idUsuarios, "values")[5]
                 self.mailUsuario.insert(0, self.maiUsuario)
                 self.calleUsuario.delete(0, "end")
-                self.callUsuario=self.listaUsuarios.item(id, "values")[6]
+                self.callUsuario=self.listaUsuarios.item(idUsuarios, "values")[6]
                 self.calleUsuario.insert(0, self.callUsuario)
                 self.alturaUsuario.delete(0, "end")
-                self.altUsuario=self.listaUsuarios.item(id, "values")[7]
+                self.altUsuario=self.listaUsuarios.item(idUsuarios, "values")[7]
                 self.alturaUsuario.insert(0, self.altUsuario)
                 self.pisoUsuario.delete(0, "end")
-                self.pisUsuario=self.listaUsuarios.item(id, "values")[8]
+                self.pisUsuario=self.listaUsuarios.item(idUsuarios, "values")[8]
                 self.pisoUsuario.insert(0, self.pisUsuario)
                 self.departamentoUsuario.delete(0, "end")
-                self.depUsuario=self.listaUsuarios.item(id, "values")[9]
+                self.depUsuario=self.listaUsuarios.item(idUsuarios, "values")[9]
                 self.departamentoUsuario.insert(0, self.depUsuario)
                 self.barrioUsuario.delete(0, "end")
-                self.barUsuario=self.listaUsuarios.item(id, "values")[10]
+                self.barUsuario=self.listaUsuarios.item(idUsuarios, "values")[10]
                 self.barrioUsuario.insert(0, self.barUsuario)
                 
 
@@ -1378,7 +1379,7 @@ class PizzaYa():
         self.listaUsuarios.column("barrio",width=150, anchor=CENTER) 
         self.listaUsuarios.pack()                                 
         self.listaUsuarios.place(width=600, height=220, x=10)
-        self.listaUsuarios.bind("<<TreeviewSelect>>", click)
+        self.listaUsuarios.bind("<<TreeviewSelect>>", clickUsuarios)
         
         self.listaUsuarios.heading("#0",text="")
         self.listaUsuarios.heading("usuario",text="Usuario")
@@ -1475,8 +1476,8 @@ class PizzaYa():
 
 
         def clickMenu(event):
-            idMenu= self.listaMenu.selection()[0]
-            if int(idMenu)>0:
+            if len(self.listaMenu.selection())>0:
+                idMenu= self.listaMenu.selection()[0]
                 self.menuId.set(value=(self.listaMenu.item(idMenu, "values")[0]))
                 self.descripcionMenu.delete(0, "end")
                 self.desMenu=self.listaMenu.item(idMenu, "values")[1]
@@ -1575,8 +1576,8 @@ class PizzaYa():
 
 
         def clickCategoriasMenu(event):
-            idCategoriasMenu= self.listaCategoriasMenu.selection()[0]
-            if int(idCategoriasMenu)>0:
+            if len(self.listaCategoriasMenu.selection())>0:
+                idCategoriasMenu= self.listaCategoriasMenu.selection()[0]
                 self.categoriasMenuId.set(value=(self.listaCategoriasMenu.item(idCategoriasMenu, "values")[0]))
                 self.descripcion.delete(0, "end")
                 self.des=self.listaCategoriasMenu.item(idCategoriasMenu, "values")[1]
@@ -1633,8 +1634,8 @@ class PizzaYa():
                     tabla.insert("", END, i[0], values= i)
 
     def completarTablaDetallePedidos(self, cursor, tabla, pedidoID):
-        cursor.execute("SELECT cantidad,descripcion,precio_venta FROM detalle_pedidos INNER JOIN menu ON detalle_pedidos.id_menu=menu.menu_id WHERE id_pedido = "+
-                            str(pedidoID))
+        cursor.execute("SELECT detalle_pedidos_id,cantidad,descripcion,precio_venta FROM detalle_pedidos "+
+                        "INNER JOIN menu ON detalle_pedidos.id_menu=menu.menu_id WHERE id_pedido = "+ str(pedidoID))
         self.consultaCTDP = cursor.fetchall()
 
         for i in self.consultaCTDP:
@@ -1666,7 +1667,7 @@ class PizzaYa():
         cancelado.config(text=self.totCancelado.get())
         
     def completarTablaProductosMenu(self, cursor, tabla, listaPedido, textoTotal):
-        self.total=0
+        self.totalCTPM=0
      
         cursor.execute("SELECT menu_id,descripcion,precio_venta FROM menu WHERE activo = 1 ORDER BY descripcion ASC")
         self.consultaCTPM = cursor.fetchall()
@@ -1674,9 +1675,9 @@ class PizzaYa():
         for j in self.consultaCTPM:
             if listaPedido.get(j[0]):
                 tabla.insert("", END, j[0], values= (listaPedido.get(j[0]),j[0],j[1],j[2]))
-                self.total +=(j[2]*listaPedido.get(j[0]))
+                self.totalCTPM +=(j[2]*listaPedido.get(j[0]))
        
-        textoTotal.config(text=("$ "+str(self.total)))
+        textoTotal.config(text=("$ "+str(self.totalCTPM)))
     
     def completarTablaProductosMenuActualizado(self, cursor, tabla, listaPedido, opcion, aumentoPorc,
                                                 rebajaPorc, aumentoFij, rebajaFij, ventana):
@@ -2141,16 +2142,19 @@ def main():
     us = Usuarios(basDat, cu)
     
     try:
-        while True:
-            log = Login(cu, ic)
+        #while True:
+        #    log = Login(cu, ic)
                 
-            if log.estaOk() == 1:
-                app = PizzaYa(log.getUsuario(), cu, ic, re, cl, ca, me, pe, us)
+        #    if log.estaOk() == 1:
+        #        app = PizzaYa(log.getUsuario(), cu, ic, re, cl, ca, me, pe, us)
 
-            else: 
-                exit()
-            del log
-            del app
+        #    else: 
+        #        exit()
+        #    del log
+        #    del app
+
+        mi_app = PizzaYa(2,cu, ic, re, cl, ca, me, pe, us)
+            
 
     except mysql.connector.errors.DatabaseError:
         messagebox.showerror("PizzaYa", "Sin Conexión con la Base de Datos.")
